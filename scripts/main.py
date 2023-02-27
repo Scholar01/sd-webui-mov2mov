@@ -22,7 +22,7 @@ def hook(hookfunc, oldfunc):
 
 class Script(scripts.Script):
     def __init__(self) -> None:
-        self.debug = True
+        self.debug = False
         self.video_file = ''
         self.movie_frames = 0
         self.enabled = False
