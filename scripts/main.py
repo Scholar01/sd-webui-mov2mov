@@ -22,7 +22,7 @@ def hook(hookfunc, oldfunc):
 
 class Script(scripts.Script):
     def __init__(self) -> None:
-        self.debug = False
+        self.debug = True
         self.video_file = ''
         self.movie_frames = 0
         self.enabled = False
@@ -105,13 +105,21 @@ class Script(scripts.Script):
                 raise ValueError('not video file')
 
             # 路径处理
+            if self.debug:
+                print('开始处理')
 
             mov2mov_images_path = os.path.join(scripts.basedir(), 'outputs', 'mov2mov-images')
+            if self.debug:
+                print(f'mov2mov_images_path：{mov2mov_images_path}')
+
             if not os.path.exists(mov2mov_images_path):
                 os.mkdir(mov2mov_images_path)
 
             current_mov2mov_images_path = os.path.join(mov2mov_images_path, str(int(time.time())))
             os.mkdir(current_mov2mov_images_path)
+
+            if self.debug:
+                print(f'current_mov2mov_images_path：{current_mov2mov_images_path}')
 
             v2i_path = os.path.join(current_mov2mov_images_path, 'In')
             i2v_path = os.path.join(current_mov2mov_images_path, 'Out')
