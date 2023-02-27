@@ -45,7 +45,7 @@ class Script(scripts.Script):
     def ui(self, is_img2img):
         if is_img2img:
             with gr.Group():
-                with gr.Accordion("Mov2mov", open=True):
+                with gr.Accordion("Mov2mov", open=False):
                     self.video_file_component = gr.Video()
 
                     enabled = gr.Checkbox(value=False, label="Enabled")
