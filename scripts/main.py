@@ -31,7 +31,7 @@ class Script(scripts.Script):
         super().__init__()
 
     def title(self):
-        return "OpenPose Editor"
+        return "Mov2mov"
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
