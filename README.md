@@ -25,6 +25,7 @@
 
 - 打包后的视频在目录 `outputs/mov2mov-images/` 下
 - 可能需要安装opencv
+- 目录不可以有中文！！！
 
 ## 常见问题
 
