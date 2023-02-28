@@ -10,7 +10,8 @@ import modules.scripts as scripts
 from modules import shared, script_callbacks
 import gradio as gr
 
-from scripts.util import video_to_images, images_to_video
+from scripts.m2m_util import video_to_images, images_to_video
+
 
 
 def hook(hookfunc, oldfunc):
@@ -22,11 +23,11 @@ def hook(hookfunc, oldfunc):
 
 class Script(scripts.Script):
     def __init__(self) -> None:
-        self.debug = False
+        self.debug = True
         self.video_file = ''
-        self.movie_frames = 0
+        self.movie_frames = 30
         self.enabled = False
-        self.video_file_component = None
+
         modules.img2img.img2img = hook(self.mov2mov, modules.img2img.img2img)
         super().__init__()
 
@@ -37,18 +38,37 @@ class Script(scripts.Script):
         return scripts.AlwaysVisible
 
     def noise_multiplier_change(self, noise_multiplier):
+        if self.debug:
+            print(f'update noise_multiplier:{noise_multiplier}')
         shared.opts.data['initial_noise_multiplier'] = noise_multiplier
 
     def color_correction_change(self, color_correction):
+        if self.debug:
+            print(f'update color_correction:{color_correction}')
         shared.opts.data['img2img_color_correction'] = color_correction
+
+    def video_file_component_change(self, video_file_component):
+        if self.debug:
+            print(f'update video_file:{video_file_component}')
+        self.video_file = video_file_component
+
+    def movie_frames_change(self, movie_frames):
+        if self.debug:
+            print(f'update movie_frames:{movie_frames}')
+        self.movie_frames = movie_frames
+
+    def enabled_change(self, enabled):
+        if self.debug:
+            print(f'update enabled:{enabled}')
+        self.enabled = enabled
 
     def ui(self, is_img2img):
         if is_img2img:
             with gr.Group():
                 with gr.Accordion("Mov2mov", open=False):
-                    self.video_file_component = gr.Video()
+                    video_file_component = gr.Video()
 
-                    enabled = gr.Checkbox(value=False, label="Enabled")
+                    enabled = gr.Checkbox(value=self.enabled, label="Enabled")
                     with gr.Row():
                         noise_multiplier = gr.Slider(minimum=0,
                                                      maximum=1.5,
@@ -68,25 +88,28 @@ class Script(scripts.Script):
                                                  step=1,
                                                  label='Movie Frames',
                                                  elem_id='mm_img2img_movie_frames',
-                                                 value=30)
+                                                 value=self.movie_frames)
 
-                        button_apply = gr.Button(value='Apply', variant='secondary', elem_id='mm_img2img_apply')
+                        # button_apply = gr.Button(value='Apply', variant='secondary', elem_id='mm_img2img_apply')
 
             noise_multiplier.change(fn=self.noise_multiplier_change, inputs=[noise_multiplier])
             color_correction.change(fn=self.color_correction_change, inputs=[color_correction])
+            video_file_component.change(fn=self.video_file_component_change, inputs=[video_file_component])
+            movie_frames.change(fn=self.movie_frames_change, inputs=[movie_frames])
+            enabled.change(fn=self.enabled_change, inputs=[enabled])
 
-            button_apply.click(fn=self.do_apply,
-                               inputs=[enabled, self.video_file_component, movie_frames, noise_multiplier,
-                                       color_correction])
+            # button_apply.click(fn=self.do_apply,
+            #                    inputs=[enabled, video_file_component, movie_frames, noise_multiplier,
+            #                            color_correction])
 
-            return [enabled, self.video_file_component, noise_multiplier, color_correction, movie_frames, button_apply]
+            return [enabled, video_file_component, noise_multiplier, color_correction, movie_frames]
 
-    def do_apply(self, enabled, video_file, movie_frames, noise_multiplier, color_correction):
-        self.enabled = enabled
-        self.video_file = video_file
-        self.movie_frames = movie_frames
-        shared.opts.data['initial_noise_multiplier'] = noise_multiplier
-        shared.opts.data['img2img_color_correction'] = color_correction
+    # def do_apply(self, enabled, video_file, movie_frames, noise_multiplier, color_correction):
+    #     self.enabled = enabled
+    #     self.video_file = video_file
+    #     self.movie_frames = movie_frames
+    #     shared.opts.data['initial_noise_multiplier'] = noise_multiplier
+    #     shared.opts.data['img2img_color_correction'] = color_correction
 
     def mov2mov(self, id_task: str, mode: int, prompt: str, negative_prompt: str, prompt_styles, init_img,
                 sketch,
@@ -105,8 +128,8 @@ class Script(scripts.Script):
                 raise ValueError('not video file')
 
             # 路径处理
-            if self.debug:
-                print('开始处理')
+
+            print(f'Start converting video, frame number:{self.movie_frames}')
 
             mov2mov_images_path = os.path.join(scripts.basedir(), 'outputs', 'mov2mov-images')
             if self.debug:
@@ -127,10 +150,10 @@ class Script(scripts.Script):
             os.mkdir(i2v_path)
 
             # 首先把视频转换成图片
-            frames = video_to_images(self.movie_frames, self.video_file, v2i_path)
+            frames, counts = video_to_images(self.movie_frames, self.video_file, v2i_path)
 
-            if self.debug:
-                print(f'帧数：{frames},开始batch处理')
+            print(f'The video conversion is completed, frames:{frames}, images:{counts}')
+
             mode = 5
             img2img_batch_input_dir = v2i_path
             img2img_batch_output_dir = i2v_path
@@ -147,9 +170,10 @@ class Script(scripts.Script):
                          img2img_batch_input_dir, img2img_batch_output_dir, img2img_batch_inpaint_mask_dir,
                          override_settings_texts, *args)
         if self.enabled:
-            print('generating mp4 file')
+            print('Start generating .mp4 file')
+            # todo: frames not update
             movie = images_to_video(self.movie_frames, width, height, i2v_path, os.path.join(i2v_path, 'movie.mp4'))
-            print(f'generate mp4 file:{movie}')
+            print(f'The generation is complete, the directory::{movie}')
         return result
 
 

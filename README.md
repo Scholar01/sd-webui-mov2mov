@@ -28,7 +28,7 @@
 
 ## 常见问题
 
-- 目前已知会和`Additional Networks`扩展冲突
+- ~~目前已知会和`Additional Networks`扩展冲突~~
 
 ## 说明
 
