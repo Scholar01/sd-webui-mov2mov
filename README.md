@@ -23,6 +23,14 @@
 
 ## 注意
 
+- 打包后的视频在目录 `outputs/mov2mov-images/` 下
+- 可能需要安装opencv
+
 ## 常见问题
 
+- 目前已知会和`Additional Networks`扩展冲突
+
 ## 说明
+
+- 视频教程：https://www.bilibili.com/video/BV1Mo4y1a7DF
+- 深入交流群：650109306
