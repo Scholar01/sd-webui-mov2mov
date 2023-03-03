@@ -28,6 +28,6 @@
 - ~~目前已知会和`Additional Networks`扩展冲突~~
 
 ## 说明
-
+- Max Frames: 限定生成的视频最大帧数（设置为1视频只有1帧，-1则全部）
 - 视频教程：https://www.bilibili.com/video/BV1Mo4y1a7DF
 - 深入交流群：650109306
