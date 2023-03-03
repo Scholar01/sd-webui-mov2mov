@@ -1,6 +1,7 @@
 import os.path
 
 import cv2
+import numpy
 
 
 def video_to_images(frames, video_path, out_path):
@@ -32,21 +33,41 @@ def video_to_images(frames, video_path, out_path):
     return frames, count
 
 
-def images_to_video(frames, w, h, in_path, out_path):
-    images = os.listdir(in_path)
-    images = [file for file in images if file.endswith('.jpg')]
-    if len(images) == 0:
-        raise FileNotFoundError('not images')
+def get_mov_all_images(file, frames):
+    if file is None:
+        return None
+    cap = cv2.VideoCapture(file)
 
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    if not cap.isOpened():
+        return None
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if frames > fps:
+        print('Waring: The set number of frames is greater than the number of video frames')
+        frames = int(fps)
+
+    skip = fps // frames
+    count = 1
+    fs = 1
+    image_list = []
+    while (True):
+        flag, frame = cap.read()
+        if not flag:
+            break
+        else:
+            if fs % skip == 0:
+                image_list.append(frame)
+                count += 1
+        fs += 1
+    cap.release()
+    return image_list
+
+
+def images_to_video(images, frames, mode, w, h, out_path):
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
     video = cv2.VideoWriter(out_path, fourcc, frames, (w, h))
-
-    images.sort(key=lambda x: int(x.replace('.jpg', '').replace('jpgs_', '')))
-
     for image in images:
-        p = os.path.join(in_path, image)
-        img = cv2.imread(p)
+        img = cv2.cvtColor(numpy.asarray(image), cv2.COLOR_RGB2BGR)
         video.write(img)
-        del img
     video.release()
     return out_path

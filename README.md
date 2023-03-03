@@ -1,6 +1,6 @@
 ## Mov2mov
 
-![img.png](images/img.png)
+![img.png](images/2.jpg)
 
 适用于Automatic1111/stable-diffusion-webui 的 Mov2mov 插件。
 
@@ -8,10 +8,6 @@
 - 直接从视频逐帧处理
 - 处理完成后打包成视频
 
-下个版本：
-
-- 定义时间有关的Prompt
-- 更多
 
 ## 安装方法
 
@@ -25,7 +21,7 @@
 
 - 打包后的视频在目录 `outputs/mov2mov-images/` 下
 - 可能需要安装opencv
-- 目录不可以有中文！！！
+- ~~目录不可以有中文！！！~~
 
 ## 常见问题
 

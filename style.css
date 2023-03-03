@@ -1,0 +1,136 @@
+#mov2mov_interrupt, #mov2mov_skip {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    background: #b4c0cc;
+    display: none;
+}
+
+
+#mov2mov_video {
+    display: none;
+}
+
+#mov2mov_generate {
+    min-height: 7.5em;
+}
+
+@media screen and (min-width: 2500px) {
+    #mov2mov_gallery {
+        min-height: 768px;
+    }
+}
+
+#mov2mov_gallery img {
+    object-fit: scale-down;
+}
+
+#mov2mov_tools {
+    gap: 0.4em;
+}
+
+#mov2mov_actions_column {
+    margin: 0.35rem 0.75rem 0.35rem 0;
+}
+
+
+#mov2mov_actions_column {
+    gap: 0;
+    margin-right: .75rem;
+}
+
+
+#mov2mov_styles_row {
+    gap: 0.25em;
+    margin-top: 0.3em;
+}
+
+#mov2mov_styles_row > button {
+    margin: 0;
+}
+
+#mov2mov_styles {
+    padding: 0;
+}
+
+#mov2mov_styles > label > div {
+    min-height: 3.2em;
+}
+
+#mov2mov_extra_networks .search {
+    display: inline-block;
+    max-width: 16em;
+    margin: 0.3em;
+    align-self: center;
+}
+
+#mov2mov_extra_view {
+    width: auto;
+}
+
+#mov2mov_preview {
+    position: absolute;
+    width: 320px;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 34px;
+    z-index: 100;
+    border: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+@media screen and (min-width: 768px) {
+    #mov2mov_preview {
+        position: absolute;
+    }
+}
+
+@media screen and (max-width: 767px) {
+    #mov2mov_preview {
+        position: relative;
+    }
+}
+
+#mov2mov_preview div.left-0.top-0 {
+    display: none;
+}
+
+
+#mov2mov_interrupt, #mov2mov_skip {
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    background: #b4c0cc;
+    display: none;
+}
+
+#mov2mov_interrupt {
+    left: 0;
+    border-radius: 0.5rem 0 0 0.5rem;
+}
+
+#mov2mov_skip {
+    right: 0;
+    border-radius: 0 0.5rem 0.5rem 0;
+}
+
+#mov2mov_mov {
+    height: 480px !important;
+    max-height: 480px !important;
+    min-height: 480px !important;
+}
+
+
+#mov2mov_checkboxes {
+    margin-bottom: 0.5em;
+    margin-left: 0em;
+}
+
+#mov2mov_checkboxes > div {
+    flex: 0;
+    white-space: nowrap;
+    min-width: auto;
+}
