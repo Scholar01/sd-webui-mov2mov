@@ -18,11 +18,12 @@ import modules.generation_parameters_copypaste as parameters_copypaste
 import subprocess as sp
 from scripts import mov2mov
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
+from scripts.m2m_modnet import modnet_models
+
+id_part = "mov2mov"
 
 
 def create_toprow():
-    id_part = "mov2mov"
-
     with gr.Row(elem_id=f"{id_part}_toprow", variant="compact"):
         with gr.Column(elem_id=f"{id_part}_prompt_container", scale=6):
             with gr.Row():
@@ -142,7 +143,6 @@ Requested path was: {f}
 
 
 def on_ui_tabs():
-    id_part = 'mov2mov'
     with gr.Blocks(analytics_enabled=False) as mov2mov_tabs:
         dummy_component = gr.Label(visible=False)
 
@@ -177,8 +177,8 @@ def on_ui_tabs():
                             if opts.dimensions_and_batch_together:
                                 with gr.Column(elem_id=f"{id_part}_column_batch"):
                                     generate_mov_mode = gr.Radio(label="Generate Movie Mode", elem_id="movie_mode",
-                                                        choices=["MP4V", "H.264", "XVID", ], type="index",
-                                                        value="H.264")
+                                                                 choices=["MP4V", "H.264", "XVID", ], type="index",
+                                                                 value="XVID")
 
                                     noise_multiplier = gr.Slider(minimum=0,
                                                                  maximum=1.5,
@@ -224,7 +224,15 @@ def on_ui_tabs():
                                                         elem_id=f"{id_part}_restore_faces")
                             tiling = gr.Checkbox(label='Tiling', value=False, elem_id=f"{id_part}_tiling")
 
-                            # fixed_seed = gr.Checkbox(label='fixed seed', value=False, elem_id=f"{id_part}_fixedseed")
+                            extract_characters = gr.Checkbox(label='Extract characters (Need modnet models)',
+                                                             value=False, elem_id=f"{id_part}_extract_characters")
+
+                            extract_characters.change(fn=None, inputs=[extract_characters], _js='showModnetModels')
+
+                        with FormRow(elem_id=f'{id_part}_modnet_models'):
+                            modnet_model = gr.Dropdown(label='Model', choices=list(modnet_models), value='none',
+                                                       elem_id=f"{id_part}_modnet_model")
+
 
 
                     elif category == "override_settings":
@@ -251,7 +259,9 @@ def on_ui_tabs():
                            sampler_index,
                            restore_faces,
                            tiling,
-                           # fixed_seed,
+                           extract_characters,
+                           modnet_model,
+
                            generate_mov_mode,
                            noise_multiplier,
                            # color_correction,

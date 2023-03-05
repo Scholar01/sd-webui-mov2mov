@@ -4,6 +4,7 @@ import time
 import cv2
 from PIL import Image
 
+import modules.images
 from modules import shared, sd_samplers, processing
 from modules.generation_parameters_copypaste import create_override_settings_dict
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, Processed
@@ -12,9 +13,12 @@ import modules.scripts as scripts
 from scripts.m2m_util import get_mov_all_images, images_to_video
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
 from modules.ui import plaintext_to_html
+from scripts.m2m_modnet import get_model, infer, infer2
 
 
-def process_mov2mov(p, mov_file, movie_frames, max_frames, w, h, generate_mov_mode, args):
+def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, generate_mov_mode, extract_characters,
+                    modnet_model,
+                    args):
     processing.fix_seed(p)
 
     images = get_mov_all_images(mov_file, movie_frames)
@@ -41,13 +45,35 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, w, h, generate_mov_mo
 
         if state.interrupted:
             break
-        img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
+
+        modnet_network = None
+        # 处理modnet
+
+        # 存一张底图
+        backup = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
+        backup = modules.images.resize_image(resize_mode, backup, w, h)
+
+        if extract_characters:
+            print(f'loading modnet model: {modnet_model}')
+            modnet_network = get_model(modnet_model)
+            print(f'Loading modnet model completed')
+            img, mask = infer2(modnet_network, backup)
+
+        else:
+            img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
+
         p.init_images = [img] * p.batch_size
         proc = scripts.scripts_img2img.run(p, *args)
         if proc is None:
             print(f'current progress: {i + 1}/{max_frames}')
             processed = process_images(p)
-            generate_images.extend(processed.images)
+            # 只取第一张
+            gen_image = processed.images[0]
+
+            # if extract_characters:
+            #     gen_image = Image.composite(gen_image, backup, mask)
+
+            generate_images.append(gen_image)
 
     if not os.path.exists(mov2mov_output_dir):
         os.makedirs(mov2mov_output_dir, exist_ok=True)
@@ -79,6 +105,8 @@ def mov2mov(id_task: str,
             sampler_index,
             restore_faces,
             tiling,
+            extract_characters,
+            modnet_model,
             # fixed_seed,
             generate_mov_mode,
             noise_multiplier,
@@ -145,7 +173,9 @@ def mov2mov(id_task: str,
 
     print(f'\nStart parsing the number of mov frames')
 
-    generate_video = process_mov2mov(p, mov_file, movie_frames, max_frames, width, height, generate_mov_mode, args)
+    generate_video = process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, width, height,
+                                     generate_mov_mode,
+                                     extract_characters, modnet_model, args)
     processed = Processed(p, [], p.seed, "")
     p.close()
 
