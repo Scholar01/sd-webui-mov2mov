@@ -28,11 +28,17 @@
 - ~~目前已知会和`Additional Networks`扩展冲突~~
 
 ## 说明
-- Max Frames: 限定生成的视频最大帧数（设置为1视频只有1帧，-1则全部）
-- 视频教程：https://www.bilibili.com/video/BV1Mo4y1a7DF
+- 视频教程：
+  - https://www.bilibili.com/video/BV1Mo4y1a7DF
+  - https://www.bilibili.com/video/BV1rY4y1C7Q5
 - 深入交流群：650109306
 
 ## 感谢
 
 - modnet-entry: https://github.com/RimoChan/modnet-entry
 - MODNet: https://github.com/ZHKKKe/MODNet
+
+
+## 感觉不错,请作者喝杯咖啡
+
+![wechat.png](images%2Fwechat.png)![alipay.png](images%2Falipay.png)
