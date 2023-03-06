@@ -17,6 +17,7 @@ from scripts.m2m_modnet import get_model, infer, infer2
 
 
 def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, generate_mov_mode, extract_characters,
+                    merge_background,
                     modnet_model,
                     args):
     processing.fix_seed(p)
@@ -70,8 +71,8 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
             # 只取第一张
             gen_image = processed.images[0]
 
-            # if extract_characters:
-            #     gen_image = Image.composite(gen_image, backup, mask)
+            if extract_characters and merge_background:
+                gen_image = Image.composite(gen_image, backup, mask)
 
             generate_images.append(gen_image)
 
@@ -106,6 +107,7 @@ def mov2mov(id_task: str,
             restore_faces,
             tiling,
             extract_characters,
+            merge_background,
             modnet_model,
             # fixed_seed,
             generate_mov_mode,
@@ -175,7 +177,7 @@ def mov2mov(id_task: str,
 
     generate_video = process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, width, height,
                                      generate_mov_mode,
-                                     extract_characters, modnet_model, args)
+                                     extract_characters, merge_background, modnet_model, args)
     processed = Processed(p, [], p.seed, "")
     p.close()
 

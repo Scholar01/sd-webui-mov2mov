@@ -41,4 +41,6 @@
 
 ## 感觉不错,请作者喝杯咖啡
 
-![wechat.png](images%2Fwechat.png)![alipay.png](images%2Falipay.png)
+
+<img src="images/wechat.png"  height="200" width="200">
+<img src="images/alipay.png"  height="200" width="200">

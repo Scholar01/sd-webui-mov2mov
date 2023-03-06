@@ -24,5 +24,6 @@ function showResultVideo(tabname, show) {
 function showModnetModels() {
     var check = arguments[0]
     gradioApp().getElementById('mov2mov_modnet_model').style.display = check ? "block" : "none"
+    gradioApp().getElementById('mov2mov_merge_background').style.display = check ? "block" : "none"
     return []
 }

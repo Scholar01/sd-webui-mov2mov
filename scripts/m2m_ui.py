@@ -45,6 +45,8 @@ def create_toprow():
                 skip = gr.Button('Skip', elem_id=f"{id_part}_skip")
                 submit = gr.Button('Generate', elem_id=f"{id_part}_generate", variant='primary')
 
+                # add copy from txt2img img2img
+
                 skip.click(
                     fn=lambda: shared.state.skip(),
                     inputs=[],
@@ -56,6 +58,13 @@ def create_toprow():
                     inputs=[],
                     outputs=[],
                 )
+
+            # with gr.Row(elem_id=f'{id_part}_copy'):
+            #     copy_from_txt2img = gr.Button('copy from txt2img', elem_id=f"{id_part}_copy_from_txt2img",
+            #                                   variant='secondary')
+            #
+            #     copy_from_img2img = gr.Button('copy from img2img', elem_id=f"{id_part}_copy_from_img2img",
+            #                                   variant='secondary')
 
     return prompt, negative_prompt, submit
 
@@ -227,6 +236,9 @@ def on_ui_tabs():
                             extract_characters = gr.Checkbox(label='Extract characters (Need modnet models)',
                                                              value=False, elem_id=f"{id_part}_extract_characters")
 
+                            merge_background = gr.Checkbox(label='Merge background',
+                                                           value=False, elem_id=f"{id_part}_merge_background")
+
                             extract_characters.change(fn=None, inputs=[extract_characters], _js='showModnetModels')
 
                         with FormRow(elem_id=f'{id_part}_modnet_models'):
@@ -260,6 +272,7 @@ def on_ui_tabs():
                            restore_faces,
                            tiling,
                            extract_characters,
+                           merge_background,
                            modnet_model,
 
                            generate_mov_mode,

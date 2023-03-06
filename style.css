@@ -6,7 +6,7 @@
     display: none;
 }
 
-#mov2mov_modnet_model {
+#mov2mov_modnet_model, #mov2mov_merge_background {
     display: none;
 }
 
