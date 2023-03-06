@@ -27,3 +27,9 @@ function showModnetModels() {
     gradioApp().getElementById('mov2mov_merge_background').style.display = check ? "block" : "none"
     return []
 }
+
+
+function copy_from(type) {
+    console.log(type)
+    return []
+}

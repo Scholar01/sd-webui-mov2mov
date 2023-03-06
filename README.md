@@ -31,7 +31,7 @@
 - 视频教程：
   - https://www.bilibili.com/video/BV1Mo4y1a7DF
   - https://www.bilibili.com/video/BV1rY4y1C7Q5
-- 深入交流群：650109306
+- 深入交流群：643678546
 
 ## 感谢
 

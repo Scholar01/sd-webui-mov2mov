@@ -65,6 +65,10 @@ def create_toprow():
             #
             #     copy_from_img2img = gr.Button('copy from img2img', elem_id=f"{id_part}_copy_from_img2img",
             #                                   variant='secondary')
+            #
+            #     copy_from_txt2img.click(None, [], [], _js="() => {return copy_from('txt2img')}")
+            #
+            #     copy_from_img2img.click(None, [], [], _js="() => {return copy_from('img2img')}")
 
     return prompt, negative_prompt, submit
 
