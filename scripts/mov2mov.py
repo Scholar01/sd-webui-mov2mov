@@ -2,7 +2,7 @@ import os.path
 import time
 
 import cv2
-from PIL import Image
+from PIL import Image, ImageOps
 
 import modules.images
 from modules import shared, sd_samplers, processing
@@ -51,17 +51,14 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
         # 处理modnet
 
         # 存一张底图
-        backup = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
-        backup = modules.images.resize_image(resize_mode, backup, w, h)
 
+        img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
+        img = ImageOps.exif_transpose(img)
         if extract_characters:
             print(f'loading modnet model: {modnet_model}')
             modnet_network = get_model(modnet_model)
             print(f'Loading modnet model completed')
-            img, mask = infer2(modnet_network, backup)
-
-        else:
-            img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
+            img, _ = infer2(modnet_network, img)
 
         p.init_images = [img] * p.batch_size
         proc = scripts.scripts_img2img.run(p, *args)
@@ -69,9 +66,13 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
             print(f'current progress: {i + 1}/{max_frames}')
             processed = process_images(p)
             # 只取第一张
+
             gen_image = processed.images[0]
 
             if extract_characters and merge_background:
+                backup = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
+                backup = modules.images.resize_image(resize_mode, backup, w, h)
+                _, mask = infer2(modnet_network, backup)
                 gen_image = Image.composite(gen_image, backup, mask)
 
             generate_images.append(gen_image)
@@ -129,7 +130,11 @@ def mov2mov(id_task: str,
 
     override_settings = create_override_settings_dict(override_settings_text)
     assert 0. <= denoising_strength <= 1., 'can only work with strength in [0.0, 1.0]'
-
+    mask_blur = 4
+    inpainting_fill = 1
+    inpaint_full_res = False
+    inpaint_full_res_padding = 32
+    inpainting_mask_invert = 0
     p = StableDiffusionProcessingImg2Img(
         sd_model=shared.sd_model,
         outpath_samples=mov2mov_outpath_samples,
@@ -154,14 +159,14 @@ def mov2mov(id_task: str,
         tiling=tiling,
         init_images=[None],
         mask=None,
-        mask_blur=0,
-        inpainting_fill=0,
+        mask_blur=mask_blur,
+        inpainting_fill=inpainting_fill,
         resize_mode=resize_mode,
         denoising_strength=denoising_strength,
         image_cfg_scale=image_cfg_scale,
-        inpaint_full_res=False,
-        inpaint_full_res_padding=0,
-        inpainting_mask_invert=0,
+        inpaint_full_res=inpaint_full_res,
+        inpaint_full_res_padding=inpaint_full_res_padding,
+        inpainting_mask_invert=inpainting_mask_invert,
         override_settings=override_settings,
         initial_noise_multiplier=noise_multiplier
     )
@@ -171,7 +176,7 @@ def mov2mov(id_task: str,
     if shared.cmd_opts.enable_console_prompts:
         print(f"\nmov2mov: {prompt}", file=shared.progress_print_out)
 
-    p.extra_generation_params["Mask blur"] = 0
+    p.extra_generation_params["Mask blur"] = mask_blur
 
     print(f'\nStart parsing the number of mov frames')
 
