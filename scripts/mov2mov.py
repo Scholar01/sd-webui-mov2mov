@@ -141,7 +141,7 @@ def mov2mov(id_task: str,
         outpath_grids=opts.outdir_grids or opts.outdir_img2img_grids,
         prompt=prompt,
         negative_prompt=negative_prompt,
-        styles=None,
+        styles=[],
         seed=seed,
         subseed=subseed,
         subseed_strength=subseed_strength,
@@ -170,6 +170,7 @@ def mov2mov(id_task: str,
         override_settings=override_settings,
         initial_noise_multiplier=noise_multiplier
     )
+
     p.scripts = scripts.scripts_img2img
     p.script_args = args
 
