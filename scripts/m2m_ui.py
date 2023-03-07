@@ -74,7 +74,9 @@ def create_toprow():
 
 
 def save_video(video):
-    path = shared.opts.outdir_save
+    path = 'logs/movies'
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
     index = len([path for path in os.listdir(path) if path.endswith('.mp4')]) + 1
     video_path = os.path.join(path, str(index).zfill(5) + '.mp4')
     shutil.copyfile(video, video_path)
@@ -195,7 +197,7 @@ def on_ui_tabs():
 
                                     noise_multiplier = gr.Slider(minimum=0,
                                                                  maximum=1.5,
-                                                                 step=0.1,
+                                                                 step=0.01,
                                                                  label='Noise multiplier',
                                                                  elem_id=f'{id_part}_noise_multiplier',
                                                                  value=0)
