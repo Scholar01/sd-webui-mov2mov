@@ -262,7 +262,7 @@ def on_ui_tabs():
                             custom_inputs = scripts.scripts_img2img.setup_ui()
 
             mov2mov_gallery, result_video, generation_info, html_info, html_log = create_output_panel("mov2mov",
-                                                                                                      mov2mov_output_dir)
+                                                                                                      shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir))
 
             mov2mov_args = dict(
                 fn=wrap_gradio_gpu_call(mov2mov.mov2mov, extra_outputs=[None, '', '']),
@@ -309,5 +309,13 @@ def on_ui_tabs():
 
     return [(mov2mov_tabs, "mov2mov", f"{id_part}_tabs")]
 
+# 注册设置页的配置项
+def on_ui_settings():
+    section = ('mov2mov', "Mov2Mov")
+    shared.opts.add_option("mov2mov_outpath_samples", shared.OptionInfo(
+        mov2mov_outpath_samples, "Mov2Mov output path for image", section=section))   #图片保存路径
+    shared.opts.add_option("mov2mov_output_dir", shared.OptionInfo(
+        mov2mov_output_dir, "Mov2Mov output path for vedio", section=section))     #视频保存路径
 
+script_callbacks.on_ui_settings(on_ui_settings)    #注册进设置页
 script_callbacks.on_ui_tabs(on_ui_tabs)

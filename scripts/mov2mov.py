@@ -77,8 +77,8 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
 
             generate_images.append(gen_image)
 
-    if not os.path.exists(mov2mov_output_dir):
-        os.makedirs(mov2mov_output_dir, exist_ok=True)
+    if not os.path.exists(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir)):
+        os.makedirs(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir), exist_ok=True)
 
     if generate_mov_mode == 0:
         r_f = '.mp4'
@@ -93,7 +93,7 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
     print(f'Start generating {r_f} file')
 
     video = images_to_video(generate_images, movie_frames, mode, w, h,
-                            os.path.join(mov2mov_output_dir, str(int(time.time())) + r_f, ))
+                            os.path.join(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir), str(int(time.time())) + r_f, ))
     print(f'The generation is complete, the directory::{video}')
 
     return video
@@ -137,7 +137,7 @@ def mov2mov(id_task: str,
     inpainting_mask_invert = 0
     p = StableDiffusionProcessingImg2Img(
         sd_model=shared.sd_model,
-        outpath_samples=mov2mov_outpath_samples,
+        outpath_samples= shared.opts.data.get("mov2mov_outpath_samples", mov2mov_outpath_samples),
         outpath_grids=opts.outdir_grids or opts.outdir_img2img_grids,
         prompt=prompt,
         negative_prompt=negative_prompt,
