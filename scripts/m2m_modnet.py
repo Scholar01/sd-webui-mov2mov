@@ -18,7 +18,7 @@ from modnet-entry("https://github.com/RimoChan/modnet-entry")
 
 script_path = scripts.basedir()
 models_path = os.path.join(script_path, "models")
-modnet_models = ['none'] + [model for model in os.listdir(models_path) if model.endswith('.ckpt')]
+modnet_models = [model for model in os.listdir(models_path) if model.endswith('.ckpt')]
 
 
 def get_model(ckpt_name):
