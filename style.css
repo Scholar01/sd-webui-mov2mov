@@ -6,7 +6,11 @@
     display: none;
 }
 
-#mov2mov_modnet_model, #mov2mov_merge_background {
+/*#mov2mov_modnet_model, #mov2mov_merge_background {*/
+/*    display: none;*/
+/*}*/
+
+#modnet_background_movie {
     display: none;
 }
 

@@ -28,8 +28,21 @@ function showModnetModels() {
     return []
 }
 
+function switchModnetMode() {
+    let mode = arguments[0]
+
+    if (mode === 'Clear' || mode === 'Origin' || mode === 'Green' || mode === 'Image') {
+        gradioApp().getElementById('modnet_background_movie').style.display = "none"
+        gradioApp().getElementById('modnet_background_image').style.display = "block"
+    } else {
+        gradioApp().getElementById('modnet_background_movie').style.display = "block"
+        gradioApp().getElementById('modnet_background_image').style.display = "none"
+    }
+
+    return []
+}
+
 
 function copy_from(type) {
-    console.log(type)
     return []
 }

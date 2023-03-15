@@ -157,6 +157,48 @@ Requested path was: {f}
         return result_gallery, result_video, generation_info, html_info, html_log
 
 
+def create_modnet(id_part):
+    with gr.Group():
+        with gr.Accordion("ModNet", open=True):
+            background_image = gr.Image(label='Background', type='numpy', elem_id='modnet_background_image').style()
+            background_movie = gr.Video(label='Background', elem_id='modnet_background_movie').style()
+            with gr.Row():
+                gr.HTML(
+                    value='<p>这个功能是可选功能.<br >作用是把人物抠出来，单独重绘<br >重绘完可以选择清除背景，合成原背景，合成绿幕，合成图片，合成视频<br >缩放设置是设置背景的缩放，如果你不懂怎么调试，就设置成和原视频一样的吧！<br >合成视频方式也是选择帧率，提取图片进行合成。请注意保证背景视频长度大于原视频长度</p>')
+
+            with gr.Row():
+                enable = gr.Checkbox(label='Enable', value=False, elem_id=f"{id_part}_enable")  # 启用就是提取人物了
+
+                modnet_model = gr.Dropdown(label='Model', choices=list(modnet_models), value='none',
+                                           elem_id=f"{id_part}_modnet_model")
+
+            with gr.Row():
+                modnet_resize_mode = gr.Radio(label="Resize mode", elem_id=f"{id_part}_resize_mode",
+                                              choices=["Just resize", "Crop and resize", "Resize and fill",
+                                                       "Just resize (latent upscale)"], type="index",
+                                              value="Just resize")
+
+            with gr.Row():
+                merge_background_mode = gr.Radio(label='Background Mode', elem_id=f'{id_part}_merge_background_mode',
+                                                 choices=['Clear', 'Origin', 'Green', 'Image', 'Movie'],
+                                                 type='index',
+                                                 value='Clear')
+
+                merge_background_mode.change(fn=None, inputs=[merge_background_mode], outputs=[],
+                                             _js='switchModnetMode')
+
+            with gr.Row():
+                movie_frames = gr.Slider(minimum=10,
+                                         maximum=60,
+                                         step=1,
+                                         label='Movie Frames',
+                                         elem_id='modnet_movie_frames',
+                                         value=30)
+
+    return [enable, background_image, background_movie, modnet_model, modnet_resize_mode, merge_background_mode,
+            movie_frames]
+
+
 def on_ui_tabs():
     with gr.Blocks(analytics_enabled=False) as mov2mov_tabs:
         dummy_component = gr.Label(visible=False)
@@ -193,7 +235,7 @@ def on_ui_tabs():
                                 with gr.Column(elem_id=f"{id_part}_column_batch"):
                                     generate_mov_mode = gr.Radio(label="Generate Movie Mode", elem_id="movie_mode",
                                                                  choices=["MP4V", "H.264", "XVID", ], type="index",
-                                                                 value="XVID")
+                                                                 value="H.264")
 
                                     noise_multiplier = gr.Slider(minimum=0,
                                                                  maximum=1.5,
@@ -239,17 +281,7 @@ def on_ui_tabs():
                                                         elem_id=f"{id_part}_restore_faces")
                             tiling = gr.Checkbox(label='Tiling', value=False, elem_id=f"{id_part}_tiling")
 
-                            extract_characters = gr.Checkbox(label='Extract characters (Need modnet models)',
-                                                             value=False, elem_id=f"{id_part}_extract_characters")
 
-                            merge_background = gr.Checkbox(label='Merge background',
-                                                           value=False, elem_id=f"{id_part}_merge_background")
-
-                            extract_characters.change(fn=None, inputs=[extract_characters], _js='showModnetModels')
-
-                        with FormRow(elem_id=f'{id_part}_modnet_models'):
-                            modnet_model = gr.Dropdown(label='Model', choices=list(modnet_models), value='none',
-                                                       elem_id=f"{id_part}_modnet_model")
 
 
 
@@ -259,10 +291,15 @@ def on_ui_tabs():
 
                     elif category == "scripts":
                         with FormGroup(elem_id=f"{id_part}_script_container"):
+                            modnet_enable, modnet_background_image, modnet_background_movie, modnet_model, modnet_resize_mode, modnet_merge_background_mode, modnet_movie_frames = create_modnet(
+                                'modnet')
+
                             custom_inputs = scripts.scripts_img2img.setup_ui()
 
             mov2mov_gallery, result_video, generation_info, html_info, html_log = create_output_panel("mov2mov",
-                                                                                                      shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir))
+                                                                                                      shared.opts.data.get(
+                                                                                                          "mov2mov_output_dir",
+                                                                                                          mov2mov_output_dir))
 
             mov2mov_args = dict(
                 fn=wrap_gradio_gpu_call(mov2mov.mov2mov, extra_outputs=[None, '', '']),
@@ -277,9 +314,11 @@ def on_ui_tabs():
                            sampler_index,
                            restore_faces,
                            tiling,
-                           extract_characters,
-                           merge_background,
-                           modnet_model,
+                           # extract_characters,
+                           # merge_background,
+                           # modnet_model,
+                           modnet_enable, modnet_background_image, modnet_background_movie, modnet_model,
+                           modnet_resize_mode, modnet_merge_background_mode, modnet_movie_frames,
 
                            generate_mov_mode,
                            noise_multiplier,
@@ -309,13 +348,15 @@ def on_ui_tabs():
 
     return [(mov2mov_tabs, "mov2mov", f"{id_part}_tabs")]
 
+
 # 注册设置页的配置项
 def on_ui_settings():
     section = ('mov2mov', "Mov2Mov")
     shared.opts.add_option("mov2mov_outpath_samples", shared.OptionInfo(
-        mov2mov_outpath_samples, "Mov2Mov output path for image", section=section))   #图片保存路径
+        mov2mov_outpath_samples, "Mov2Mov output path for image", section=section))  # 图片保存路径
     shared.opts.add_option("mov2mov_output_dir", shared.OptionInfo(
-        mov2mov_output_dir, "Mov2Mov output path for vedio", section=section))     #视频保存路径
+        mov2mov_output_dir, "Mov2Mov output path for vedio", section=section))  # 视频保存路径
 
-script_callbacks.on_ui_settings(on_ui_settings)    #注册进设置页
+
+script_callbacks.on_ui_settings(on_ui_settings)  # 注册进设置页
 script_callbacks.on_ui_tabs(on_ui_tabs)
