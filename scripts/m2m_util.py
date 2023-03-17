@@ -65,6 +65,11 @@ def get_mov_all_images(file, frames):
 
 def images_to_video(images, frames, mode, w, h, out_path):
     fourcc = cv2.VideoWriter_fourcc(*mode)
+    if len(images) > 0:
+        img = images[0]
+        img_width, img_height = img.size
+        w = img_width
+        h = img_height
     video = cv2.VideoWriter(out_path, fourcc, frames, (w, h))
     for image in images:
         img = cv2.cvtColor(numpy.asarray(image), cv2.COLOR_RGB2BGR)
