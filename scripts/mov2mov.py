@@ -1,4 +1,5 @@
 import os.path
+import re
 import time
 
 import cv2
@@ -26,6 +27,14 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
                     args):
     processing.fix_seed(p)
 
+    # 判断是不是多prompt
+    re_prompts = re.findall(r'\*([0-9]+):(.*?)\|\|', p.prompt, re.DOTALL)
+    re_negative_prompts = re.findall(r'\*([0-9]+):(.*?)\|\|', p.negative_prompt, re.DOTALL)
+    prompts = {}
+    negative_prompts = {}
+    for ppt in re_prompts: prompts[int(ppt[0])] = ppt[1]
+    for ppt in re_negative_prompts: negative_prompts[int(ppt[0])] = ppt[1]
+
     images = get_mov_all_images(mov_file, movie_frames)
     if not images:
         print('Failed to parse the video, please check')
@@ -48,6 +57,14 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
     for i, image in enumerate(images):
         if i >= max_frames:
             break
+
+        if i + 1 in prompts.keys():
+            p.prompt = prompts[i + 1]
+            print(f'change prompt:{p.prompt}')
+
+        if i + 1 in negative_prompts.keys():
+            p.negative_prompt = negative_prompts[i + 1]
+            print(f'change negative_prompts:{p.negative_prompt}')
 
         state.job = f"{i + 1} out of {max_frames}"
         if state.skipped:

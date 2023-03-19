@@ -14,7 +14,10 @@
   - 合成绿幕
   - 合成指定图片背景
   - 合成指定视频背景
-
+- 逐帧处理prompt和negative_prompt：
+  - 以 *帧数:prompt|| 标记 *开始 ||结束
+  - *1:1girl||*100:2girl|| 第一帧使用1girl到第99帧，然后第100帧开始使用2girl到结束。
+  - negative_prompt也同样。
 
 ## 安装方法
 
