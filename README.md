@@ -48,7 +48,7 @@
 - 视频教程：
   - https://www.bilibili.com/video/BV1Mo4y1a7DF
   - https://www.bilibili.com/video/BV1rY4y1C7Q5
-- 深入交流q群：643678546
+- qq频道: https://pd.qq.com/s/akxpjjsgd
 
 ## 感谢
 
