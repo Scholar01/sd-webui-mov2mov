@@ -64,6 +64,10 @@ def get_mov_all_images(file, frames):
 
 
 def images_to_video(images, frames, mode, w, h, out_path):
+    # 判断out_path是否存在,不存在则创建
+    if not os.path.exists(os.path.dirname(out_path)):
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+
     fourcc = cv2.VideoWriter_fourcc(*mode)
     if len(images) > 0:
         img = images[0]
