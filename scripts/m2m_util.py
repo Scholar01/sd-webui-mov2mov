@@ -83,7 +83,6 @@ def images_to_video(images, frames, mode, codec, w, h, out_path):
         print("Try another mode.")
         video = imageio.v2.get_writer(out_path, format='ffmpeg', mode='I', fps=frames, codec=codec)
         for image in images:
-            img = imageio.imread(image)
-            video.append_data(img)
+            video.append_data(numpy.asarray(image))
         video.close()
     return out_path
