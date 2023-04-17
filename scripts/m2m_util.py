@@ -66,23 +66,23 @@ def images_to_video(images, frames, mode, codec, w, h, out_path):
     # 判断out_path是否存在,不存在则创建
     if not os.path.exists(os.path.dirname(out_path)):
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    try:
-        fourcc = cv2.VideoWriter_fourcc(*mode)
-        if len(images) > 0:
-            img = images[0]
-            img_width, img_height = img.size
-            w = img_width
-            h = img_height
-        video = cv2.VideoWriter(out_path, fourcc, frames, (w, h))
-        for image in images:
-            img = cv2.cvtColor(numpy.asarray(image), cv2.COLOR_RGB2BGR)
-            video.write(img)
-        video.release()
-    except Exception as e:
-        print(e)
-        print("Try another mode.")
-        video = imageio.v2.get_writer(out_path, format='ffmpeg', mode='I', fps=frames, codec=codec)
-        for image in images:
-            video.append_data(numpy.asarray(image))
-        video.close()
+    video = imageio.v2.get_writer(out_path, format='ffmpeg', mode='I', fps=frames, codec=codec)
+    for image in images:
+        video.append_data(numpy.asarray(image))
+    video.close()
+    #try:
+    #    fourcc = cv2.VideoWriter_fourcc(*mode)
+    #    if len(images) > 0:
+    #        img = images[0]
+    #        img_width, img_height = img.size
+    #        w = img_width
+    #        h = img_height
+    #    video = cv2.VideoWriter(out_path, fourcc, frames, (w, h))
+    #    for image in images:
+    #        img = cv2.cvtColor(numpy.asarray(image), cv2.COLOR_RGB2BGR)
+    #        video.write(img)
+    #    video.release()
+    #except Exception as e:
+    #    print(e)
+    #    print("Try another mode.")
     return out_path
