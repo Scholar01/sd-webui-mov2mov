@@ -2,6 +2,7 @@ import os.path
 
 import cv2
 import numpy
+import imageio
 
 
 def video_to_images(frames, video_path, out_path):
