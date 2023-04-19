@@ -355,7 +355,7 @@ def on_ui_settings():
     shared.opts.add_option("mov2mov_outpath_samples", shared.OptionInfo(
         mov2mov_outpath_samples, "Mov2Mov output path for image", section=section))  # 图片保存路径
     shared.opts.add_option("mov2mov_output_dir", shared.OptionInfo(
-        mov2mov_output_dir, "Mov2Mov output path for vedio", section=section))  # 视频保存路径
+        mov2mov_output_dir, "Mov2Mov output path for video", section=section))  # 视频保存路径
 
 
 script_callbacks.on_ui_settings(on_ui_settings)  # 注册进设置页
