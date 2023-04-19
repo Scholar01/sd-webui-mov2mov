@@ -49,6 +49,7 @@
   - https://www.bilibili.com/video/BV1Mo4y1a7DF
   - https://www.bilibili.com/video/BV1rY4y1C7Q5
 - qq频道: https://pd.qq.com/s/akxpjjsgd
+- discord: https://discord.gg/hUzF3kQKFW
 
 ## 感谢
 
