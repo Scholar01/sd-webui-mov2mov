@@ -266,6 +266,11 @@ def on_ui_tabs():
                                                      label='Movie Frames',
                                                      elem_id=f'{id_part}_movie_frames',
                                                      value=30)
+                            
+                            # add prompt option select-box
+                            append_interrogation = gr.Dropdown(label="Append interrogated prompt at each iteration",
+                                                               choices=["None", "CLIP", "DeepBooru"], 
+                                                               value="None")
 
                     elif category == "seed":
                         max_frames = gr.Number(label='Max Frames', value=-1, elem_id=f'{id_part}_max_frames')
@@ -334,6 +339,8 @@ def on_ui_tabs():
                            width,
                            resize_mode,
                            override_settings,
+                           append_interrogation,
+                                
                        ] + custom_inputs,
                 outputs=[
                     mov2mov_gallery,

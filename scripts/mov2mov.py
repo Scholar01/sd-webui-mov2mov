@@ -10,6 +10,7 @@ from modules import shared, sd_samplers, processing
 from modules.generation_parameters_copypaste import create_override_settings_dict
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, Processed
 from modules.shared import opts, state
+from modules import deepbooru
 import modules.scripts as scripts
 from scripts.m2m_util import get_mov_all_images, images_to_video
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
@@ -23,7 +24,7 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
                     # modnet_model,
                     modnet_enable, modnet_background_image, modnet_background_movie, modnet_model, modnet_resize_mode,
                     modnet_merge_background_mode, modnet_movie_frames,
-
+                    append_interrogation,
                     args):
     processing.fix_seed(p)
 
@@ -48,20 +49,25 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
     print(f'The video conversion is completed, images:{len(images)}')
     if max_frames == -1 or max_frames > len(images):
         max_frames = len(images)
-
+    
     max_frames = int(max_frames)
 
     p.do_not_save_grid = True
     state.job_count = max_frames  # * p.n_iter
     generate_images = []
+    
+    # base image
+    base_prompt = p.prompt
+    
     for i, image in enumerate(images):
         if i >= max_frames:
             break
-
+        
         if i + 1 in prompts.keys():
             p.prompt = prompts[i + 1]
             print(f'change prompt:{p.prompt}')
-
+            base_prompt = p.prompt
+        
         if i + 1 in negative_prompts.keys():
             p.negative_prompt = negative_prompts[i + 1]
             print(f'change negative_prompts:{p.negative_prompt}')
@@ -77,7 +83,18 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
         # 存一张底图
         img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
         img = ImageOps.exif_transpose(img)
-
+        
+        # add interrogation
+        if append_interrogation != "None":
+            p.prompt = base_prompt + ", " if base_prompt != "" else ""
+            if append_interrogation == "CLIP":
+                p.prompt += shared.interrogator.interrogate(img)
+            elif append_interrogation == "DeepBooru":
+                p.prompt += deepbooru.model.tag(img)
+            
+        print(f'Add interrogation: {p.prompt}')
+        
+        
         b_img = img.copy()
         if modnet_enable and modnet_model:
             # 提取出人物
@@ -175,7 +192,9 @@ def mov2mov(id_task: str,
             height,
             width,
             resize_mode,
-            override_settings_text, *args):
+            override_settings_text,
+            append_interrogation, *args):
+    
     if not mov_file:
         raise Exception('Error！ Please add a video file!')
 
@@ -238,6 +257,7 @@ def mov2mov(id_task: str,
                                      modnet_enable, modnet_background_image, modnet_background_movie, modnet_model,
                                      modnet_resize_mode,
                                      modnet_merge_background_mode, modnet_movie_frames,
+                                     append_interrogation,
 
                                      args)
     processed = Processed(p, [], p.seed, "")
