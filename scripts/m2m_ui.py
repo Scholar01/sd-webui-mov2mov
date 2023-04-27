@@ -268,7 +268,9 @@ def on_ui_tabs():
                                                      value=30)
 
                     elif category == "seed":
-                        max_frames = gr.Number(label='Max Frames', value=-1, elem_id=f'{id_part}_max_frames')
+                        with FormRow():
+                            max_frames = gr.Number(label='Max Frames', value=-1, elem_id=f'{id_part}_max_frames')
+                            controlnet_num_to_send_previous_frame = gr.Number(label='Target ControlNet Number to send previous frame', value=-1, elem_id=f'{id_part}_controlnet_num_to_send_previous_frame')
                         seed, reuse_seed, subseed, reuse_subseed, subseed_strength, seed_resize_from_h, seed_resize_from_w, seed_checkbox = create_seed_inputs(
                             'mov2mov')
 
@@ -328,6 +330,7 @@ def on_ui_tabs():
                            denoising_strength,
                            movie_frames,
                            max_frames,
+                           controlnet_num_to_send_previous_frame,
                            seed,
                            subseed, subseed_strength, seed_resize_from_h, seed_resize_from_w, seed_checkbox,
                            height,
