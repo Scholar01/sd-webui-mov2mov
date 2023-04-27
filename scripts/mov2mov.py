@@ -1,6 +1,7 @@
 import os.path
 import re
 import time
+from typing import Any
 
 import cv2
 from PIL import Image, ImageOps
@@ -8,7 +9,7 @@ from PIL import Image, ImageOps
 import modules.images
 from modules import shared, sd_samplers, processing
 from modules.generation_parameters_copypaste import create_override_settings_dict
-from modules.processing import StableDiffusionProcessingImg2Img, process_images, Processed
+from modules.processing import StableDiffusionProcessingImg2Img, process_images, Processed, StableDiffusionProcessing
 from modules.shared import opts, state
 import modules.scripts as scripts
 from scripts.m2m_util import get_mov_all_images, images_to_video
@@ -23,6 +24,7 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
                     # modnet_model,
                     modnet_enable, modnet_background_image, modnet_background_movie, modnet_model, modnet_resize_mode,
                     modnet_merge_background_mode, modnet_movie_frames,
+                    controlnet_num_to_send_previous_frame,
 
                     args):
     processing.fix_seed(p)
@@ -54,6 +56,8 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
     p.do_not_save_grid = True
     state.job_count = max_frames  # * p.n_iter
     generate_images = []
+    previous_frame = None
+    
     for i, image in enumerate(images):
         if i >= max_frames:
             break
@@ -65,6 +69,11 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
         if i + 1 in negative_prompts.keys():
             p.negative_prompt = negative_prompts[i + 1]
             print(f'change negative_prompts:{p.negative_prompt}')
+
+        if(previous_frame is not None):
+            opts.control_net_allow_script_control = True
+            set_p_value(p, 'control_net_input_image', controlnet_num_to_send_previous_frame, previous_frame)
+            print(f'change Controlnet-{controlnet_num_to_send_previous_frame:d} Image')
 
         state.job = f"{i + 1} out of {max_frames}"
         if state.skipped:
@@ -93,6 +102,10 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ge
             processed = process_images(p)
             # 只取第一张
             gen_image = processed.images[0]
+
+            # Get New Frame Image for send to controlnet
+            if(controlnet_num_to_send_previous_frame in range(0,max_cn_num())):
+                previous_frame = gen_image
 
             # 合成图像
             if modnet_enable and modnet_merge_background_mode != 0:
@@ -170,6 +183,7 @@ def mov2mov(id_task: str,
             denoising_strength,
             movie_frames,
             max_frames,
+            controlnet_num_to_send_previous_frame,
             seed,
             subseed, subseed_strength, seed_resize_from_h, seed_resize_from_w, seed_enable_extras,
             height,
@@ -238,6 +252,7 @@ def mov2mov(id_task: str,
                                      modnet_enable, modnet_background_image, modnet_background_movie, modnet_model,
                                      modnet_resize_mode,
                                      modnet_merge_background_mode, modnet_movie_frames,
+                                     int(controlnet_num_to_send_previous_frame),
 
                                      args)
     processed = Processed(p, [], p.seed, "")
@@ -254,3 +269,19 @@ def mov2mov(id_task: str,
 
     return processed.images, generate_video, generation_info_js, plaintext_to_html(processed.info), plaintext_to_html(
         processed.comments)
+
+
+def set_p_value(p: StableDiffusionProcessing, attr: str, idx: int, v: Any):
+    value = getattr(p, attr, None)
+    if isinstance(value, list):
+        value[idx] = v
+    else:
+        # if value is None, ControlNet uses default value
+        value = [value] * max_cn_num()
+        value[idx] = v
+    setattr(p, attr, value)
+
+def max_cn_num():
+    if opts.data is None:
+        return 1
+    return int(opts.data.get('control_net_max_models_num', 1))
