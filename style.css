@@ -125,12 +125,23 @@
     border-radius: 0 0.5rem 0.5rem 0;
 }
 
-#mov2mov_mov {
-    height: 480px !important;
-    max-height: 480px !important;
-    min-height: 480px !important;
+#mov2mov_mov video {
+    height: 480px;
+    max-height: 480px;
+    min-height: 480px;
 }
 
+#mov2mov_video video {
+    height: 480px;
+    max-height: 480px;
+    min-height: 480px;
+}
+
+#modnet_background_movie video {
+    height: 480px;
+    max-height: 480px;
+    min-height: 480px;
+}
 
 #mov2mov_checkboxes {
     margin-bottom: 0.5em;
