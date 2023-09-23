@@ -142,3 +142,7 @@
     white-space: nowrap;
     min-width: auto;
 }
+
+#mov2mov_extra_view {
+    width: auto;
+}

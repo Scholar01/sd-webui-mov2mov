@@ -7,14 +7,14 @@
 功能：
 - 直接从视频逐帧处理
 - 处理完成后打包成视频
-- 对视频进行抠图，合成等预处理和后处理
+- ~~对视频进行抠图，合成等预处理和后处理~~
   - 抠取人像
   - 合成透明背景
   - 合成原背景
   - 合成绿幕
   - 合成指定图片背景
   - 合成指定视频背景
-- 逐帧处理prompt和negative_prompt：
+- ~~逐帧处理prompt和negative_prompt~~
   - 以 *帧数:prompt|| 标记 *开始 ||结束
   - *1:1girl||*100:2girl|| 第一帧使用1girl到第99帧，然后第100帧开始使用2girl到结束。
   - negative_prompt也同样。
@@ -40,9 +40,16 @@
 - 可能需要安装opencv
 - ~~目录不可以有中文！！！~~
 
-## 常见问题
+## 更新日志
 
-- ~~目前已知会和`Additional Networks`扩展冲突~~
+### 2023/9/23
+
+1. 修复sd1.6版本选项卡不显示的问题.
+2. 推理视频宽高
+3. 支持Refiner
+4. 移除modnet功能.
+5. 暂时移除逐帧添加prompt功能(ps:我觉得有更好的方式,下个版本添加)
+6. 修改合成视频的ffmpeg为imageio
 
 ## 说明
 - 视频教程：
@@ -56,9 +63,3 @@
 - modnet-entry: https://github.com/RimoChan/modnet-entry
 - MODNet: https://github.com/ZHKKKe/MODNet
 
-
-## 感觉不错,请作者喝杯咖啡
-
-
-<img src="images/wechat.png"  height="200" width="200">
-<img src="images/alipay.png"  height="200" width="200">
