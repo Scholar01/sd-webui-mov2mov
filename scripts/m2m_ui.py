@@ -19,7 +19,6 @@ from modules.ui_components import ResizeHandleRow, FormRow, ToolButton, FormGrou
 from scripts import mov2mov
 from scripts import m2m_util
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
-from scripts.m2m_modnet import modnet_models
 
 id_part = "mov2mov"
 
@@ -130,7 +129,7 @@ def on_ui_tabs():
                                             source="upload")
 
                 with FormRow():
-                    resize_mode = gr.Radio(label="Resize mode", elem_id="resize_mode",
+                    resize_mode = gr.Radio(label="Resize mode", elem_id=f"{id_part}_resize_mode",
                                            choices=["Just resize", "Crop and resize", "Resize and fill",
                                                     "Just resize (latent upscale)"], type="index", value="Just resize")
                 scripts.scripts_img2img.prepare_ui()
@@ -218,7 +217,6 @@ def on_ui_tabs():
                 _js="submit_mov2mov",
                 inputs=[
                            dummy_component,
-                           # dummy_component,
                            toprow.prompt,
                            toprow.negative_prompt,
                            toprow.ui_styles.dropdown,
