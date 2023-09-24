@@ -8,15 +8,15 @@ import shutil
 import subprocess as sp
 import modules
 from modules import script_callbacks, shared, call_queue, sd_samplers, patches, \
-    ui_prompt_styles
+    ui_prompt_styles, sd_models
 from modules.images import image_data
 from modules.call_queue import wrap_gradio_gpu_call
 from modules.shared import opts
 from modules.ui import ordered_ui_categories, create_sampler_and_steps_selection, switch_values_symbol, \
     create_override_settings_dropdown, detect_image_size_symbol, plaintext_to_html, paste_symbol, \
     clear_prompt_symbol, restore_progress_symbol
-from modules.ui_common import folder_symbol, update_generation_info
-from modules.ui_components import ResizeHandleRow, FormRow, ToolButton, FormGroup
+from modules.ui_common import folder_symbol, update_generation_info, create_refresh_button
+from modules.ui_components import ResizeHandleRow, FormRow, ToolButton, FormGroup, InputAccordion
 from rich import print
 
 from scripts import m2m_util
@@ -205,6 +205,21 @@ Requested path was: {f}
             return result_gallery, result_video, generation_info, html_info, html_log
 
 
+def create_refiner():
+    with InputAccordion(False, label="Refiner", elem_id=f"{id_part}_enable") as enable_refiner:
+        with gr.Row():
+            refiner_checkpoint = gr.Dropdown(label='Checkpoint', elem_id=f"{id_part}_checkpoint",
+                                             choices=sd_models.checkpoint_tiles(), value='',
+                                             tooltip="switch to another model in the middle of generation")
+            create_refresh_button(refiner_checkpoint, sd_models.list_models,
+                                  lambda: {"choices": sd_models.checkpoint_tiles()}, f"{id_part}_checkpoint_refresh")
+
+            refiner_switch_at = gr.Slider(value=0.8, label="Switch at", minimum=0.01, maximum=1.0, step=0.01,
+                                          elem_id=f"{id_part}_switch_at",
+                                          tooltip="fraction of sampling steps when the switch to refiner model should happen; 1=never, 0.5=switch in the middle of generation")
+    return enable_refiner, refiner_checkpoint, refiner_switch_at
+
+
 def on_ui_tabs():
     # with gr.Blocks(analytics_enabled=False) as mov2mov_interface:
     with gr.TabItem('mov2mov', id=f"tab_{id_part}", elem_id=f"tab_{id_part}") as mov2mov_interface:
@@ -280,7 +295,7 @@ def on_ui_tabs():
                     elif category == "accordions":
 
                         with gr.Row(elem_id=f"{id_part}_accordions", elem_classes="accordions"):
-                            scripts.scripts_img2img.setup_ui_for_section(category)
+                            enable_refiner, refiner_checkpoint, refiner_switch_at = create_refiner()
 
                     elif category == "override_settings":
                         with FormRow(elem_id=f"{id_part}_override_settings_row") as row:
@@ -320,6 +335,9 @@ def on_ui_tabs():
                            width,
                            resize_mode,
                            override_settings,
+
+                           # refiner
+                           enable_refiner, refiner_checkpoint, refiner_switch_at,
 
                            noise_multiplier,
                            movie_frames,

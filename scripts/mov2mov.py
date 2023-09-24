@@ -86,6 +86,9 @@ def mov2mov(id_task: str,
             resize_mode,
             override_settings_texts,
 
+            # refiner
+            enable_refiner, refiner_checkpoint, refiner_switch_at,
+
             noise_multiplier,
             movie_frames,
             max_frames,
@@ -135,6 +138,13 @@ def mov2mov(id_task: str,
     p.scripts = scripts.scripts_img2img
     p.script_args = args
 
+    if not enable_refiner or refiner_checkpoint in (None, "", "None"):
+        p.refiner_checkpoint = None
+        p.refiner_switch_at = None
+    else:
+        p.refiner_checkpoint = refiner_checkpoint
+        p.refiner_switch_at = refiner_switch_at
+
     if shared.cmd_opts.enable_console_prompts:
         print(f"\nmov2mov: {prompt}", file=shared.progress_print_out)
 
@@ -155,5 +165,5 @@ def mov2mov(id_task: str,
     if opts.do_not_show_images:
         processed.images = []
 
-    return  generate_video, generation_info_js, plaintext_to_html(processed.info), plaintext_to_html(
+    return generate_video, generation_info_js, plaintext_to_html(processed.info), plaintext_to_html(
         processed.comments, classname="comments")
