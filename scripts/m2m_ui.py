@@ -7,7 +7,7 @@ import platform
 import shutil
 import subprocess as sp
 import modules
-from modules import script_callbacks, shared, call_queue, sd_samplers, patches, \
+from modules import script_callbacks, shared, call_queue, sd_samplers, \
     ui_prompt_styles, sd_models
 from modules.images import image_data
 from modules.call_queue import wrap_gradio_gpu_call
@@ -17,10 +17,10 @@ from modules.ui import ordered_ui_categories, create_sampler_and_steps_selection
     clear_prompt_symbol, restore_progress_symbol
 from modules.ui_common import folder_symbol, update_generation_info, create_refresh_button
 from modules.ui_components import ResizeHandleRow, FormRow, ToolButton, FormGroup, InputAccordion
-from rich import print
 
 from scripts import m2m_util
 from scripts import mov2mov
+from scripts import m2m_hook as patches
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
 
 id_part = "mov2mov"

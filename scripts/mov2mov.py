@@ -1,13 +1,9 @@
 import os.path
-import re
 import time
 
 import cv2
-from PIL import Image, ImageOps
-from rich import print
-import modules.images
-from rich import print
-from modules import shared, sd_samplers, processing
+from PIL import Image
+from modules import shared, processing
 from modules.generation_parameters_copypaste import create_override_settings_dict
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, Processed
 from modules.shared import opts, state

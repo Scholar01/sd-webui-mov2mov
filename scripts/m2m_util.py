@@ -1,6 +1,5 @@
 import os.path
 import platform
-from rich import print
 import cv2
 import numpy
 import imageio
