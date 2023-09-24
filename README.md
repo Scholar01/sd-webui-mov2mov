@@ -1,65 +1,67 @@
+[English](README.md) | [中文简体](README_CN.md)
+
 ## Mov2mov
 
 ![img.png](images/2.jpg)
 
-适用于Automatic1111/stable-diffusion-webui 的 Mov2mov 插件。
+This is the Mov2mov plugin for Automatic1111/stable-diffusion-webui.
 
-功能：
-- 直接从视频逐帧处理
-- 处理完成后打包成视频
-- ~~对视频进行抠图，合成等预处理和后处理~~
-  - 抠取人像
-  - 合成透明背景
-  - 合成原背景
-  - 合成绿幕
-  - 合成指定图片背景
-  - 合成指定视频背景
-- ~~逐帧处理prompt和negative_prompt~~
-  - 以 *帧数:prompt|| 标记 *开始 ||结束
-  - *1:1girl||*100:2girl|| 第一帧使用1girl到第99帧，然后第100帧开始使用2girl到结束。
-  - negative_prompt也同样。
+Features:
+- Directly process frames from videos
+- Package into a video after processing
+- ~~Video matting, synthesis, and other preprocessing and postprocessing~~
+  - ~~Extract human figures~~
+  - ~~Synthesize with a transparent background~~
+  - ~~Synthesize with the original background~~
+  - ~~Synthesize with a green screen~~
+  - ~~Synthesize with a specified image background~~
+  - ~~Synthesize with a specified video background~~
+- ~~Frame-by-frame processing prompt and negative_prompt~~
+  - ~~Use *frame number:prompt|| to mark *start ||end~~
+  - ~~*1:1girl||*100:2girl|| Use 1girl for the first frame to the 99th frame, then use 2girl from the 100th frame to the end.~~
+  - ~~The same applies to negative_prompt.~~
 
-## 安装方法
+## Installation
 
-1. 打开扩展（Extension）标签。
-2. 点击从网址安装（Install from URL）
-3. 在扩展的 git 仓库网址（URL for extension's git repository）处输入 
-4. 点击安装（Install）
-5. 重启 WebUI
+1. Open the Extensions tab.
+2. Click on Install from URL.
+3. Enter the URL for the extension's git repository.
+4. Click Install.
+5. Restart WebUI.
 
-## 使用规约
+## Usage Regulations
 
-1. 请自行解决视频来源的授权问题，任何由于使用非授权视频进行转换造成的问题，需自行承担全部责任和一切后果，于mov2mov无关！
-2. 任何发布到视频平台的基于mov2mov制作的视频，都必须要在简介中明确指明用于转换的视频来源。例如：使用他人发布的视频，通过ai进行转换的，必须要给出明确的原视频链接；若使用的是自己/自己的视频，也必须在简介加以说明。
-3. 由输入源造成的侵权问题需自行承担全部责任和一切后果。注意，很多视频明确指出不可转载，复制！
-4. 请严格遵守国家相关法律法规，确保内容合法合规。任何由于使用本插件造成的法律责任，需自行承担全部责任和一切后果，于mov2mov无关！
+1. Please resolve the authorization issues of the video source on your own. Any problems caused by using unauthorized videos for conversion must be borne by the user. It has nothing to do with mov2mov!
+2. Any video made with mov2mov and published on video platforms must clearly specify the source of the video used for conversion in the description. For example, if you use someone else's video and convert it through AI, you must provide a clear link to the original video; if you use your own video, you must also state this in the description.
+3. All copyright issues caused by the input source must be borne by the user. Note that many videos explicitly state that they cannot be reproduced or copied!
+4. Please strictly comply with national laws and regulations to ensure that the content is legal and compliant. Any legal responsibility caused by using this plugin must be borne by the user. It has nothing to do with mov2mov!
 
-## 注意
+## Notes
 
-- 打包后的视频在目录 `outputs/mov2mov-images/` 下
-- 可能需要安装opencv
-- ~~目录不可以有中文！！！~~
+- The packaged video is located in the `outputs/mov2mov-images/` directory.
+- You may need to install opencv.
+- ~~The directory cannot contain Chinese characters!!!~~
 
-## 更新日志
+## Update Log
 
 ### 2023/9/23
 
-1. 修复sd1.6版本选项卡不显示的问题.
-2. 推理视频宽高
-3. 支持Refiner
-4. 移除modnet功能.
-5. 暂时移除逐帧添加prompt功能(ps:我觉得有更好的方式,下个版本添加)
-6. 修改合成视频的ffmpeg为imageio
+1. Fixed the issue where the tab is not displayed in the sd1.6 version.
+2. Inference video width and height.
+3. Support for Refiner.
+4. Temporarily Removed modnet functionality.
+5. Temporarily removed the function to add prompts frame by frame (ps: I think there's a better way, will add in the next version).
+6. Changed video synthesis ffmpeg to imageio.
 
-## 说明
-- 视频教程：
-  - https://www.bilibili.com/video/BV1Mo4y1a7DF
-  - https://www.bilibili.com/video/BV1rY4y1C7Q5
-- qq频道: https://pd.qq.com/s/akxpjjsgd
-- discord: https://discord.gg/hUzF3kQKFW
+## Instructions
 
-## 感谢
+- Video tutorials:
+  - [https://www.bilibili.com/video/BV1Mo4y1a7DF](https://www.bilibili.com/video/BV1Mo4y1a7DF)
+  - [https://www.bilibili.com/video/BV1rY4y1C7Q5](https://www.bilibili.com/video/BV1rY4y1C7Q5)
+- QQ channel: [https://pd.qq.com/s/akxpjjsgd](https://pd.qq.com/s/akxpjjsgd)
+- Discord: [https://discord.gg/hUzF3kQKFW](https://discord.gg/hUzF3kQKFW)
 
-- modnet-entry: https://github.com/RimoChan/modnet-entry
-- MODNet: https://github.com/ZHKKKe/MODNet
+## Thanks
 
+- modnet-entry: [https://github.com/RimoChan/modnet-entry](https://github.com/RimoChan/modnet-entry)
+- MODNet: [https://github.com/ZHKKKe/MODNet](https://github.com/ZHKKKe/MODNet)
