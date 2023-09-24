@@ -1,29 +1,27 @@
-import time
-
-from typing import Callable, Any
-
-import os
-import shutil
 import sys
 
 import gradio as gr
-import platform
 import modules.scripts as scripts
-from modules import script_callbacks, shared, ui_postprocessing, call_queue, ui_extra_networks, sd_samplers, patches
-from modules.call_queue import wrap_gradio_gpu_call
-from modules.sd_samplers import samplers_for_img2img
-from modules.shared import opts
-from rich import print
+import os
+import platform
+import shutil
 import subprocess as sp
+import modules
+from modules import script_callbacks, shared, call_queue, sd_samplers, patches, \
+    ui_prompt_styles
+from modules.images import image_data
+from modules.call_queue import wrap_gradio_gpu_call
+from modules.shared import opts
 from modules.ui import ordered_ui_categories, create_sampler_and_steps_selection, switch_values_symbol, \
-    create_override_settings_dropdown, detect_image_size_symbol, resize_from_to_html, plaintext_to_html
+    create_override_settings_dropdown, detect_image_size_symbol, plaintext_to_html, paste_symbol, \
+    clear_prompt_symbol, restore_progress_symbol
 from modules.ui_common import folder_symbol, update_generation_info
-from modules.ui_components import ResizeHandleRow, FormRow, ToolButton, FormGroup, FormHTML
+from modules.ui_components import ResizeHandleRow, FormRow, ToolButton, FormGroup
+from rich import print
 
-from scripts import mov2mov
 from scripts import m2m_util
+from scripts import mov2mov
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
-from scripts.module_ui_extensions import Toprow
 
 id_part = "mov2mov"
 
@@ -37,6 +35,92 @@ def save_video(video):
     shutil.copyfile(video, video_path)
     filename = os.path.relpath(video_path, path)
     return gr.File.update(value=video_path, visible=True), plaintext_to_html(f"Saved: {filename}")
+
+
+class Toprow:
+    """Creates a top row UI with prompts, generate button, styles, extra little buttons for things, and enables some functionality related to their operation"""
+
+    def __init__(self, is_img2img, id_part=None):
+        if not id_part:
+            id_part = "img2img" if is_img2img else "txt2img"
+        self.id_part = id_part
+
+        with gr.Row(elem_id=f"{id_part}_toprow", variant="compact"):
+            with gr.Column(elem_id=f"{id_part}_prompt_container", scale=6):
+                with gr.Row():
+                    with gr.Column(scale=80):
+                        with gr.Row():
+                            self.prompt = gr.Textbox(label="Prompt", elem_id=f"{id_part}_prompt", show_label=False,
+                                                     lines=3,
+                                                     placeholder="Prompt (press Ctrl+Enter or Alt+Enter to generate)",
+                                                     elem_classes=["prompt"])
+                            self.prompt_img = gr.File(label="", elem_id=f"{id_part}_prompt_image", file_count="single",
+                                                      type="binary", visible=False)
+
+                with gr.Row():
+                    with gr.Column(scale=80):
+                        with gr.Row():
+                            self.negative_prompt = gr.Textbox(label="Negative prompt", elem_id=f"{id_part}_neg_prompt",
+                                                              show_label=False, lines=3,
+                                                              placeholder="Negative prompt (press Ctrl+Enter or Alt+Enter to generate)",
+                                                              elem_classes=["prompt"])
+
+            self.button_interrogate = None
+            self.button_deepbooru = None
+            if is_img2img:
+                with gr.Column(scale=1, elem_classes="interrogate-col"):
+                    self.button_interrogate = gr.Button('Interrogate\nCLIP', elem_id="interrogate")
+                    self.button_deepbooru = gr.Button('Interrogate\nDeepBooru', elem_id="deepbooru")
+
+            with gr.Column(scale=1, elem_id=f"{id_part}_actions_column"):
+                with gr.Row(elem_id=f"{id_part}_generate_box", elem_classes="generate-box"):
+                    self.interrupt = gr.Button('Interrupt', elem_id=f"{id_part}_interrupt",
+                                               elem_classes="generate-box-interrupt")
+                    self.skip = gr.Button('Skip', elem_id=f"{id_part}_skip", elem_classes="generate-box-skip")
+                    self.submit = gr.Button('Generate', elem_id=f"{id_part}_generate", variant='primary')
+
+                    self.skip.click(
+                        fn=lambda: shared.state.skip(),
+                        inputs=[],
+                        outputs=[],
+                    )
+
+                    self.interrupt.click(
+                        fn=lambda: shared.state.interrupt(),
+                        inputs=[],
+                        outputs=[],
+                    )
+
+                with gr.Row(elem_id=f"{id_part}_tools"):
+                    self.paste = ToolButton(value=paste_symbol, elem_id="paste")
+
+                    self.clear_prompt_button = ToolButton(value=clear_prompt_symbol, elem_id=f"{id_part}_clear_prompt")
+                    self.restore_progress_button = ToolButton(value=restore_progress_symbol,
+                                                              elem_id=f"{id_part}_restore_progress", visible=False)
+
+                    self.token_counter = gr.HTML(value="<span>0/75</span>", elem_id=f"{id_part}_token_counter",
+                                                 elem_classes=["token-counter"])
+                    self.token_button = gr.Button(visible=False, elem_id=f"{id_part}_token_button")
+                    self.negative_token_counter = gr.HTML(value="<span>0/75</span>",
+                                                          elem_id=f"{id_part}_negative_token_counter",
+                                                          elem_classes=["token-counter"])
+                    self.negative_token_button = gr.Button(visible=False, elem_id=f"{id_part}_negative_token_button")
+
+                    self.clear_prompt_button.click(
+                        fn=lambda *x: x,
+                        _js="confirm_clear_prompt",
+                        inputs=[self.prompt, self.negative_prompt],
+                        outputs=[self.prompt, self.negative_prompt],
+                    )
+
+                self.ui_styles = ui_prompt_styles.UiPromptStyles(id_part, self.prompt, self.negative_prompt)
+
+        self.prompt_img.change(
+            fn=modules.images.image_data,
+            inputs=[self.prompt_img],
+            outputs=[self.prompt, self.prompt_img],
+            show_progress=False,
+        )
 
 
 def create_output_panel(tabname, outdir):
