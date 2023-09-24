@@ -1,6 +1,7 @@
 ### 2023/9/24
 1. Move the tab behind img2img.
 2. Fix the issue of video synthesis failure on the Mac system.
+3. Fix the problem of refiner not taking effect
 
 ### 2023/9/23
 1. Fixed the issue where the tab is not displayed in the sd1.6 version.
