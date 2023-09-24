@@ -1,18 +1,19 @@
 # Fix ui library to support custom tabs
-from modules import patches, shared, ui_prompt_styles
-import modules
 import gradio as gr
-
+import modules
+from modules import shared, ui_prompt_styles
 from modules.ui import paste_symbol, clear_prompt_symbol, restore_progress_symbol
 from modules.ui_components import ToolButton
 
 
+class Toprow:
+    """Creates a top row UI with prompts, generate button, styles, extra little buttons for things, and enables some functionality related to their operation"""
 
-def Toprow_init(self, is_img2img, id_part=None):
-    if not id_part:
-        original_Toprow_init(self, is_img2img)
-    else:
+    def __init__(self, is_img2img, id_part=None):
+        if not id_part:
+            id_part = "img2img" if is_img2img else "txt2img"
         self.id_part = id_part
+
         with gr.Row(elem_id=f"{id_part}_toprow", variant="compact"):
             with gr.Column(elem_id=f"{id_part}_prompt_container", scale=6):
                 with gr.Row():
@@ -88,5 +89,3 @@ def Toprow_init(self, is_img2img, id_part=None):
             outputs=[self.prompt, self.prompt_img],
             show_progress=False,
         )
-
-original_Toprow_init = patches.patch(__name__, obj=modules.ui.Toprow, field="__init__", replacement=Toprow_init)

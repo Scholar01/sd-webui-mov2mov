@@ -44,14 +44,9 @@ Features:
 
 ## Update Log
 
-### 2023/9/23
+[Update Log](CHANGELOG.md)
 
-1. Fixed the issue where the tab is not displayed in the sd1.6 version.
-2. Inference video width and height.
-3. Support for Refiner.
-4. Temporarily Removed modnet functionality.
-5. Temporarily removed the function to add prompts frame by frame (ps: I think there's a better way, will add in the next version).
-6. Changed video synthesis ffmpeg to imageio.
+
 
 ## Instructions
 

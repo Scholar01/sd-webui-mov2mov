@@ -1,3 +1,7 @@
+import time
+
+from typing import Callable, Any
+
 import os
 import shutil
 import sys
@@ -5,13 +9,13 @@ import sys
 import gradio as gr
 import platform
 import modules.scripts as scripts
-from modules import script_callbacks, shared, ui_postprocessing, call_queue, ui_extra_networks, sd_samplers
+from modules import script_callbacks, shared, ui_postprocessing, call_queue, ui_extra_networks, sd_samplers, patches
 from modules.call_queue import wrap_gradio_gpu_call
 from modules.sd_samplers import samplers_for_img2img
 from modules.shared import opts
 from rich import print
 import subprocess as sp
-from modules.ui import Toprow, ordered_ui_categories, create_sampler_and_steps_selection, switch_values_symbol, \
+from modules.ui import ordered_ui_categories, create_sampler_and_steps_selection, switch_values_symbol, \
     create_override_settings_dropdown, detect_image_size_symbol, resize_from_to_html, plaintext_to_html
 from modules.ui_common import folder_symbol, update_generation_info
 from modules.ui_components import ResizeHandleRow, FormRow, ToolButton, FormGroup, FormHTML
@@ -19,6 +23,7 @@ from modules.ui_components import ResizeHandleRow, FormRow, ToolButton, FormGrou
 from scripts import mov2mov
 from scripts import m2m_util
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
+from scripts.module_ui_extensions import Toprow
 
 id_part = "mov2mov"
 
@@ -64,7 +69,7 @@ Requested path was: {f}
             result_gallery = gr.Gallery(label='Output', show_label=False, elem_id=f"{tabname}_gallery", columns=4,
                                         preview=True, height=shared.opts.gallery_height or None)
             result_video = gr.PlayableVideo(label='Output Video', show_label=False,
-                                    elem_id=f'{tabname}_video')
+                                            elem_id=f'{tabname}_video')
 
         generation_info = None
         with gr.Column():
@@ -117,16 +122,17 @@ Requested path was: {f}
 
 
 def on_ui_tabs():
-    with gr.Blocks(analytics_enabled=False) as mov2mov_interface:
+    # with gr.Blocks(analytics_enabled=False) as mov2mov_interface:
+    with gr.TabItem('mov2mov', id=f"tab_{id_part}", elem_id=f"tab_{id_part}") as mov2mov_interface:
         toprow = Toprow(is_img2img=False, id_part=id_part)
         dummy_component = gr.Label(visible=False)
         with gr.Tab("Generation", id=f"{id_part}_generation") as mov2mov_generation_tab, ResizeHandleRow(
                 equal_height=False):
             with gr.Column(variant='compact', elem_id="mov2mov_settings"):
                 with gr.Tabs(elem_id=f"mode_{id_part}"):
-                    with gr.TabItem('Input Video', id='mov2mov', elem_id=f"{id_part}_mov2mov_tab") as tab_mov2mov:
-                        init_mov = gr.Video(label="Video for mov2mov", elem_id="{id_part}_mov", show_label=False,
-                                            source="upload")
+
+                    init_mov = gr.Video(label="Video for mov2mov", elem_id="{id_part}_mov", show_label=False,
+                                        source="upload")
 
                 with FormRow():
                     resize_mode = gr.Radio(label="Resize mode", elem_id=f"{id_part}_resize_mode",
@@ -265,5 +271,27 @@ def on_ui_settings():
         mov2mov_output_dir, "Mov2Mov output path for video", section=section))
 
 
-script_callbacks.on_ui_settings(on_ui_settings)  # 注册进设置页
-script_callbacks.on_ui_tabs(on_ui_tabs)
+img2img_toprow: gr.Row = None
+
+
+def block_context_init(self, *args, **kwargs):
+    origin_block_context_init(self, *args, **kwargs)
+
+    if self.elem_id == 'tab_img2img':
+        self.parent.__enter__()
+        on_ui_tabs()
+        self.parent.__exit__()
+
+
+def on_app_reload():
+    global origin_block_context_init
+    if origin_block_context_init:
+        patches.undo(__name__, obj=gr.blocks.BlockContext, field="__init__")
+        origin_block_context_init = None
+
+
+origin_block_context_init = patches.patch(__name__, obj=gr.blocks.BlockContext, field="__init__",
+                                          replacement=block_context_init)
+script_callbacks.on_before_reload(on_app_reload)
+script_callbacks.on_ui_settings(on_ui_settings)
+# script_callbacks.on_ui_tabs(on_ui_tabs)
