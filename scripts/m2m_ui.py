@@ -230,7 +230,7 @@ def on_ui_tabs():
             with gr.Column(variant='compact', elem_id="mov2mov_settings"):
                 with gr.Tabs(elem_id=f"mode_{id_part}"):
 
-                    init_mov = gr.Video(label="Video for mov2mov", elem_id="{id_part}_mov", show_label=False,
+                    init_mov = gr.Video(label="Video for mov2mov", elem_id=f"{id_part}_mov", show_label=False,
                                         source="upload")
 
                 with FormRow():
