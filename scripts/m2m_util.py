@@ -19,7 +19,20 @@ def calc_video_w_h(video_path):
     return width, height
 
 
-def get_mov_all_images(file, frames):
+def get_mov_frames(file):
+    if file is None:
+        return None
+    cap = cv2.VideoCapture(file)
+
+    if not cap.isOpened():
+        return None
+
+    frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    return frames
+
+
+def get_mov_all_images(file, frames, rgb=False):
     if file is None:
         return None
     cap = cv2.VideoCapture(file)
@@ -42,6 +55,8 @@ def get_mov_all_images(file, frames):
             break
         else:
             if fs % skip == 0:
+                if rgb:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 image_list.append(frame)
                 count += 1
         fs += 1

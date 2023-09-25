@@ -220,6 +220,40 @@ def create_refiner():
     return enable_refiner, refiner_checkpoint, refiner_switch_at
 
 
+def movie_change(movie):
+    if not movie:
+        return gr.Image.update(visible=False), gr.Slider.update(visible=False)
+    global video_frames
+    frames = m2m_util.get_mov_frames(movie)
+    video_frames = m2m_util.get_mov_all_images(movie, frames, True)
+
+    return gr.Image.update(visible=True), gr.Slider.update(maximum=frames, visible=True)
+
+
+video_frames = None
+
+
+def video_frame_change(movie, frame_number):
+    if not movie:
+        return gr.Image.update(visible=False)
+    global video_frames
+
+    return gr.Image.update(visible=True, label=f"Frame: {frame_number}", value=video_frames[frame_number])
+
+
+def create_video_editor(init_mov):
+    with gr.Accordion('Video Editor', open=True, elem_id=f"{id_part}_video_editor") as video_editor_tab:
+        frame_image = gr.Image(label="Frame", elem_id=f"{id_part}_video_frame", source="upload", visible=False)
+        frame_number = gr.Slider(label="Frame number", elem_id=f"{id_part}_video_frame_number", step=1,
+                                 visible=True)
+
+    frame_number.change(fn=video_frame_change, inputs=[init_mov, frame_number], outputs=[frame_image],
+                        show_progress=False),
+    init_mov.change(fn=movie_change, inputs=[init_mov], outputs=[frame_image, frame_number], show_progress=True)
+
+    return [frame_image, frame_number]
+
+
 def on_ui_tabs():
     # with gr.Blocks(analytics_enabled=False) as mov2mov_interface:
     with gr.TabItem('mov2mov', id=f"tab_{id_part}", elem_id=f"tab_{id_part}") as mov2mov_interface:
@@ -230,7 +264,7 @@ def on_ui_tabs():
             with gr.Column(variant='compact', elem_id="mov2mov_settings"):
                 with gr.Tabs(elem_id=f"mode_{id_part}"):
 
-                    init_mov = gr.Video(label="Video for mov2mov", elem_id="{id_part}_mov", show_label=False,
+                    init_mov = gr.Video(label="Video for mov2mov", elem_id=f"{id_part}_mov", show_label=False,
                                         source="upload")
 
                 with FormRow():
@@ -302,6 +336,8 @@ def on_ui_tabs():
                             override_settings = create_override_settings_dropdown('mov2mov', row)
 
                     elif category == "scripts":
+                        frame_image, frame_number = create_video_editor(init_mov)
+
                         with FormGroup(elem_id="img2img_script_container"):
                             custom_inputs = scripts.scripts_img2img.setup_ui()
 
