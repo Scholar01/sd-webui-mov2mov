@@ -159,3 +159,8 @@
 #mov2mov_extra_view {
     width: auto;
 }
+
+/* dataframe */
+#mov2mov_video_editor_custom_data_frame button{
+    display: none;
+}

@@ -19,7 +19,7 @@ def calc_video_w_h(video_path):
     return width, height
 
 
-def get_mov_frames(file):
+def get_mov_frame_count(file):
     if file is None:
         return None
     cap = cv2.VideoCapture(file)
@@ -30,6 +30,19 @@ def get_mov_frames(file):
     frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
     return frames
+
+
+def get_mov_fps(file):
+    if file is None:
+        return None
+    cap = cv2.VideoCapture(file)
+
+    if not cap.isOpened():
+        return None
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    cap.release()
+    return fps
 
 
 def get_mov_all_images(file, frames, rgb=False):

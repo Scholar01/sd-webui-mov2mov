@@ -1,6 +1,8 @@
 import sys
 
 import gradio as gr
+import pandas
+
 import modules.scripts as scripts
 import os
 import platform
@@ -123,6 +125,136 @@ class Toprow:
         )
 
 
+class MovieEditor:
+    def __init__(self, gr_movie: gr.Video, gr_fps: gr.Slider):
+        self.gr_keyframe = None
+        self.gr_frame_number = None
+        self.gr_frame_image = None
+        self.gr_movie = gr_movie
+        self.gr_fps = gr_fps
+        self.gr_enable_movie_editor = None
+        self.is_windows = platform.system() == "Windows"
+        self.frames = []
+        self.frame_count = 0
+
+    def render(self):
+        with InputAccordion(True, label="Movie Editor(Beta Only Windows)",
+                            elem_id=f"{id_part}_editor_enable") as enable_movie_editor:
+            self.gr_enable_movie_editor = enable_movie_editor
+            self.gr_frame_image = gr.Image(label="Frame", elem_id=f"{id_part}_video_frame", source="upload",
+                                           visible=False)
+            with gr.Row():
+                self.gr_frame_number = gr.Slider(label="Frame number", elem_id=f"{id_part}_video_frame_number", step=1,
+                                                 maximum=0, minimum=0)
+                add_keyframe = ToolButton('\U00002795', elem_id=f'{id_part}_video_editor_add_keyframe',
+                                          visible=True,
+                                          tooltip="Add Key Frame")
+            # with gr.Row():
+            #     with gr.Column():
+            #         gr.Checkbox(label="remove background", elem_id=f"{id_part}_video_editor_remove_background",
+            #                     value=True)
+            # gr.Checkbox(label="interrogate key frame", elem_id=f"{id_part}_video_editor_interrogate_key_frame",
+            #             value=True)
+
+            with gr.Tabs(elem_id=f"{id_part}_video_editor_tabs"):
+                editor_tabs_state = gr.State(0)
+                with gr.TabItem(label="Auto", elem_id=f"{id_part}_video_editor_auto_tab") as tab_auto:
+                    with gr.Row():
+                        self.gr_keyframe = gr.Number(label="Key Frame Interval",
+                                                     elem_id=f"{id_part}_video_editor_key_frame_interval",
+                                                     value=2)
+
+                with gr.TabItem(label='Custom', elem_id=f"{id_part}_video_editor_custom_tab") as tab_custom:
+                    with gr.Row():
+                        data_frame = gr.Dataframe(
+                            headers=["id", "frame", "prompt"],
+                            datatype=["number", "number", "str"],
+                            row_count=1,
+                            col_count=(3, 'fixed'),
+                            max_rows=None,
+                            height=480,
+                            elem_id=f"{id_part}_video_editor_custom_data_frame",
+                        )
+
+                    with gr.Row():
+                        data_frame_clear = gr.Button(value="Clear", size='sm',
+                                                elem_id=f"{id_part}_video_editor_data_frame_clear")
+
+                    with gr.Row():
+                        interrogate = gr.Button(value="Clip Interrogate Keyframe", size='sm',
+                                                elem_id=f"{id_part}_video_editor_interrogate")
+                        deepbooru = gr.Button(value="Deepbooru Keyframe", size='sm',
+                                              elem_id=f"{id_part}_video_editor_deepbooru")
+
+                move_edit_tabs = [tab_auto, tab_custom]
+
+                for i, tab in enumerate(move_edit_tabs):
+                    tab.select(fn=lambda tabnum=i: tabnum, inputs=[], outputs=[editor_tabs_state])
+
+        self.gr_movie.change(fn=self.movie_change, inputs=[self.gr_movie],
+                             outputs=[self.gr_frame_image, self.gr_frame_number, self.gr_fps],
+                             show_progress=True)
+
+        self.gr_frame_number.change(fn=self.movie_frame_change,
+                                    inputs=[self.gr_movie, self.gr_frame_number],
+                                    outputs=[self.gr_frame_image], show_progress=True)
+
+        self.gr_fps.change(fn=self.fps_change, inputs=[self.gr_movie, self.gr_fps],
+                           outputs=[self.gr_frame_image, self.gr_frame_number], show_progress=True)
+
+        add_keyframe.click(fn=self.add_keyframe_click, inputs=[data_frame, self.gr_frame_number], outputs=[data_frame])
+
+    def add_keyframe_click(self, data_frame: pandas.core.frame.DataFrame, gr_frame_number: int):
+        if gr_frame_number < 1:
+            return data_frame
+
+        data_frame = data_frame[data_frame['frame'] > 0]
+
+        if gr_frame_number in data_frame['frame'].values:
+            return data_frame
+
+        row = {
+            "id": len(data_frame),
+            "frame": gr_frame_number,
+            "prompt": ""
+        }
+        data_frame.loc[len(data_frame)] = row
+
+        data_frame = data_frame.sort_values(by='frame').reset_index(drop=True)
+
+        data_frame['id'] = range(len(data_frame))
+
+        return data_frame
+
+    def movie_change(self, movie_path):
+        if not movie_path:
+            return gr.Image.update(visible=False), gr.Slider.update(maximum=0, minimum=0)
+        fps = m2m_util.get_mov_fps(movie_path)
+        self.frames = m2m_util.get_mov_all_images(movie_path, fps, True)
+        self.frame_count = len(self.frames)
+        return (gr.Image.update(visible=True),
+                gr.Slider.update(maximum=self.frame_count, minimum=0, value=0),
+                gr.Slider.update(maximum=fps, minimum=0, value=fps))
+
+    def movie_frame_change(self, movie_path, frame_number):
+        if not movie_path:
+            return gr.Image.update(visible=False)
+
+        if frame_number <= 0:
+            return gr.Image.update(visible=True, label=f"Frame: {frame_number}", value=None)
+
+        return gr.Image.update(visible=True, label=f"Frame: {frame_number}", value=self.frames[frame_number - 1])
+
+    def fps_change(self, movie_path, fps):
+        if not movie_path:
+            return gr.Image.update(visible=False), gr.Slider.update(maximum=0, minimum=0)
+
+        self.frames = m2m_util.get_mov_all_images(movie_path, fps, True)
+        self.frame_count = len(self.frames)
+        return (gr.Image.update(visible=True),
+                gr.Slider.update(maximum=self.frame_count, minimum=0, value=0))
+
+
 def create_output_panel(tabname, outdir):
     def open_folder(f):
         if not os.path.exists(f):
@@ -212,7 +344,8 @@ def create_refiner():
                                              choices=sd_models.checkpoint_tiles(), value='',
                                              tooltip="switch to another model in the middle of generation")
             create_refresh_button(refiner_checkpoint, sd_models.list_models,
-                                  lambda: {"choices": sd_models.checkpoint_tiles()}, f"{id_part}_checkpoint_refresh")
+                                  lambda: {"choices": sd_models.checkpoint_tiles()},
+                                  f"{id_part}_checkpoint_refresh")
 
             refiner_switch_at = gr.Slider(value=0.8, label="Switch at", minimum=0.01, maximum=1.0, step=0.01,
                                           elem_id=f"{id_part}_switch_at",
@@ -241,19 +374,6 @@ def video_frame_change(movie, frame_number):
     return gr.Image.update(visible=True, label=f"Frame: {frame_number}", value=video_frames[frame_number])
 
 
-def create_video_editor(init_mov):
-    with gr.Accordion('Video Editor', open=True, elem_id=f"{id_part}_video_editor") as video_editor_tab:
-        frame_image = gr.Image(label="Frame", elem_id=f"{id_part}_video_frame", source="upload", visible=False)
-        frame_number = gr.Slider(label="Frame number", elem_id=f"{id_part}_video_frame_number", step=1,
-                                 visible=True)
-
-    frame_number.change(fn=video_frame_change, inputs=[init_mov, frame_number], outputs=[frame_image],
-                        show_progress=False),
-    init_mov.change(fn=movie_change, inputs=[init_mov], outputs=[frame_image, frame_number], show_progress=True)
-
-    return [frame_image, frame_number]
-
-
 def on_ui_tabs():
     # with gr.Blocks(analytics_enabled=False) as mov2mov_interface:
     with gr.TabItem('mov2mov', id=f"tab_{id_part}", elem_id=f"tab_{id_part}") as mov2mov_interface:
@@ -270,18 +390,21 @@ def on_ui_tabs():
                 with FormRow():
                     resize_mode = gr.Radio(label="Resize mode", elem_id=f"{id_part}_resize_mode",
                                            choices=["Just resize", "Crop and resize", "Resize and fill",
-                                                    "Just resize (latent upscale)"], type="index", value="Just resize")
+                                                    "Just resize (latent upscale)"], type="index",
+                                           value="Just resize")
                 scripts.scripts_img2img.prepare_ui()
 
                 for category in ordered_ui_categories():
                     if category == "sampler":
-                        steps, sampler_name = create_sampler_and_steps_selection(sd_samplers.visible_sampler_names(),
-                                                                                 id_part)
+                        steps, sampler_name = create_sampler_and_steps_selection(
+                            sd_samplers.visible_sampler_names(),
+                            id_part)
                     elif category == "dimensions":
                         with FormRow():
                             with gr.Column(elem_id=f"{id_part}_column_size", scale=4):
                                 with gr.Tabs():
-                                    with gr.Tab(label="Resize to", elem_id=f"{id_part}_tab_resize_to") as tab_scale_to:
+                                    with gr.Tab(label="Resize to",
+                                                elem_id=f"{id_part}_tab_resize_to") as tab_scale_to:
                                         with FormRow():
                                             with gr.Column(elem_id=f"{id_part}_column_size", scale=4):
                                                 width = gr.Slider(minimum=64, maximum=2048, step=8, label="Width",
@@ -295,7 +418,8 @@ def on_ui_tabs():
                                                 detect_image_size_btn = ToolButton(value=detect_image_size_symbol,
                                                                                    elem_id=f"{id_part}_detect_image_size_btn")
                     elif category == "denoising":
-                        denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength',
+                        denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01,
+                                                       label='Denoising strength',
                                                        value=0.75, elem_id=f"{id_part}_denoising_strength")
 
                         noise_multiplier = gr.Slider(minimum=0,
@@ -308,10 +432,10 @@ def on_ui_tabs():
                             movie_frames = gr.Slider(minimum=10,
                                                      maximum=60,
                                                      step=1,
-                                                     label='Movie Frames',
+                                                     label='Movie FPS',
                                                      elem_id=f'{id_part}_movie_frames',
                                                      value=30)
-                            max_frames = gr.Number(label='Max Frames', value=-1, elem_id=f'{id_part}_max_frames')
+                            max_frames = gr.Number(label='Max FPS', value=-1, elem_id=f'{id_part}_max_frames')
 
 
                     elif category == "cfg":
@@ -319,7 +443,8 @@ def on_ui_tabs():
                             cfg_scale = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='CFG Scale', value=7.0,
                                                   elem_id=f"{id_part}_cfg_scale")
                             image_cfg_scale = gr.Slider(minimum=0, maximum=3.0, step=0.05, label='Image CFG Scale',
-                                                        value=1.5, elem_id=f"{id_part}_image_cfg_scale", visible=False)
+                                                        value=1.5, elem_id=f"{id_part}_image_cfg_scale",
+                                                        visible=False)
 
                     elif category == "checkboxes":
 
@@ -331,13 +456,16 @@ def on_ui_tabs():
                         with gr.Row(elem_id=f"{id_part}_accordions", elem_classes="accordions"):
                             enable_refiner, refiner_checkpoint, refiner_switch_at = create_refiner()
 
+
+
                     elif category == "override_settings":
                         with FormRow(elem_id=f"{id_part}_override_settings_row") as row:
                             override_settings = create_override_settings_dropdown('mov2mov', row)
 
                     elif category == "scripts":
-                        frame_image, frame_number = create_video_editor(init_mov)
-
+                        # frame_image, frame_number = create_video_editor(init_mov)
+                        editor = MovieEditor(init_mov, movie_frames)
+                        editor.render()
                         with FormGroup(elem_id="img2img_script_container"):
                             custom_inputs = scripts.scripts_img2img.setup_ui()
 
@@ -351,7 +479,8 @@ def on_ui_tabs():
                                  show_progress=False)
 
             # calc video size
-            detect_image_size_btn.click(fn=calc_video_w_h, inputs=[init_mov, width, height], outputs=[width, height])
+            detect_image_size_btn.click(fn=calc_video_w_h, inputs=[init_mov, width, height],
+                                        outputs=[width, height])
 
             mov2mov_args = dict(
                 fn=wrap_gradio_gpu_call(mov2mov.mov2mov, extra_outputs=[None, '', '']),
