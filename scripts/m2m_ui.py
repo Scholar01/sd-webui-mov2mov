@@ -1,5 +1,6 @@
 import sys
 
+import cv2
 import gradio as gr
 import pandas
 
@@ -9,8 +10,9 @@ import platform
 import shutil
 import subprocess as sp
 import modules
+from PIL import Image
 from modules import script_callbacks, shared, call_queue, sd_samplers, \
-    ui_prompt_styles, sd_models
+    ui_prompt_styles, sd_models, deepbooru
 from modules.images import image_data
 from modules.call_queue import wrap_gradio_gpu_call
 from modules.shared import opts
@@ -24,6 +26,8 @@ from scripts import m2m_util
 from scripts import mov2mov
 from scripts import m2m_hook as patches
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
+
+from tqdm import tqdm
 
 id_part = "mov2mov"
 
@@ -138,11 +142,18 @@ class MovieEditor:
         self.frame_count = 0
 
     def render(self):
-        with InputAccordion(True, label="Movie Editor(Beta Only Windows)",
+        with InputAccordion(True, label="Movie Editor",
                             elem_id=f"{id_part}_editor_enable") as enable_movie_editor:
             self.gr_enable_movie_editor = enable_movie_editor
             self.gr_frame_image = gr.Image(label="Frame", elem_id=f"{id_part}_video_frame", source="upload",
-                                           visible=False)
+                                           visible=False, height=480)
+
+            gr.HTML(
+                "<div style='color:red;font-weight: bold;border: 2px solid yellow;padding: 10px;font-size: 20px; '>"
+                "This feature is in beta version!!! </br>"
+                "It only supports Windows!!! </br>"
+                "Make sure you have installed the controlnet and T2I-Adapter models."
+                "</div>")
             with gr.Row():
                 self.gr_frame_number = gr.Slider(label="Frame number", elem_id=f"{id_part}_video_frame_number", step=1,
                                                  maximum=0, minimum=0)
@@ -156,40 +167,26 @@ class MovieEditor:
             # gr.Checkbox(label="interrogate key frame", elem_id=f"{id_part}_video_editor_interrogate_key_frame",
             #             value=True)
 
-            with gr.Tabs(elem_id=f"{id_part}_video_editor_tabs"):
-                editor_tabs_state = gr.State(0)
-                with gr.TabItem(label="Auto", elem_id=f"{id_part}_video_editor_auto_tab") as tab_auto:
-                    with gr.Row():
-                        self.gr_keyframe = gr.Number(label="Key Frame Interval",
-                                                     elem_id=f"{id_part}_video_editor_key_frame_interval",
-                                                     value=2)
+            with gr.Row():
+                data_frame = gr.Dataframe(
+                    headers=["id", "frame", "prompt"],
+                    datatype=["number", "number", "str"],
+                    row_count=1,
+                    col_count=(3, 'fixed'),
+                    max_rows=None,
+                    height=480,
+                    elem_id=f"{id_part}_video_editor_custom_data_frame",
+                )
 
-                with gr.TabItem(label='Custom', elem_id=f"{id_part}_video_editor_custom_tab") as tab_custom:
-                    with gr.Row():
-                        data_frame = gr.Dataframe(
-                            headers=["id", "frame", "prompt"],
-                            datatype=["number", "number", "str"],
-                            row_count=1,
-                            col_count=(3, 'fixed'),
-                            max_rows=None,
-                            height=480,
-                            elem_id=f"{id_part}_video_editor_custom_data_frame",
-                        )
+            with gr.Row():
+                data_frame_clear = gr.Button(value="Clear", size='sm',
+                                             elem_id=f"{id_part}_video_editor_data_frame_clear")
 
-                    with gr.Row():
-                        data_frame_clear = gr.Button(value="Clear", size='sm',
-                                                elem_id=f"{id_part}_video_editor_data_frame_clear")
-
-                    with gr.Row():
-                        interrogate = gr.Button(value="Clip Interrogate Keyframe", size='sm',
-                                                elem_id=f"{id_part}_video_editor_interrogate")
-                        deepbooru = gr.Button(value="Deepbooru Keyframe", size='sm',
-                                              elem_id=f"{id_part}_video_editor_deepbooru")
-
-                move_edit_tabs = [tab_auto, tab_custom]
-
-                for i, tab in enumerate(move_edit_tabs):
-                    tab.select(fn=lambda tabnum=i: tabnum, inputs=[], outputs=[editor_tabs_state])
+            with gr.Row():
+                interrogate = gr.Button(value="Clip Interrogate Keyframe", size='sm',
+                                        elem_id=f"{id_part}_video_editor_interrogate")
+                deepbooru = gr.Button(value="Deepbooru Keyframe", size='sm',
+                                      elem_id=f"{id_part}_video_editor_deepbooru")
 
         self.gr_movie.change(fn=self.movie_change, inputs=[self.gr_movie],
                              outputs=[self.gr_frame_image, self.gr_frame_number, self.gr_fps],
@@ -202,9 +199,70 @@ class MovieEditor:
         self.gr_fps.change(fn=self.fps_change, inputs=[self.gr_movie, self.gr_fps],
                            outputs=[self.gr_frame_image, self.gr_frame_number], show_progress=True)
 
-        add_keyframe.click(fn=self.add_keyframe_click, inputs=[data_frame, self.gr_frame_number], outputs=[data_frame])
+        data_frame.select(self.data_frame_select, data_frame, self.gr_frame_number)
 
-    def add_keyframe_click(self, data_frame: pandas.core.frame.DataFrame, gr_frame_number: int):
+        add_keyframe.click(fn=self.add_keyframe_click, inputs=[data_frame, self.gr_frame_number], outputs=[data_frame],
+                           show_progress=False)
+
+        data_frame_clear.click(fn=lambda df: df.drop(df.index, inplace=True), inputs=[data_frame], outputs=[data_frame],
+                               show_progress=False)
+
+        interrogate.click(fn=self.interrogate_keyframe, inputs=[data_frame],
+                          outputs=[data_frame], show_progress=True)
+
+        deepbooru.click(fn=self.deepbooru_keyframe, inputs=[data_frame],
+                        outputs=[data_frame], show_progress=True)
+
+    def interrogate_keyframe(self, data_frame: pandas.DataFrame):
+        """
+        Interrogate key frame
+        """
+        bar = tqdm(total=len(data_frame))
+        for index, row in data_frame.iterrows():
+            if row['frame'] <= 0:
+                continue
+            bar.set_description(f'Interrogate key frame {row["frame"]}')
+            frame = row['frame'] - 1
+            image = self.frames[frame]
+            image = Image.fromarray(image)
+            prompt = shared.interrogator.interrogate(image.convert("RGB"))
+            data_frame.at[index, 'prompt'] = prompt
+            bar.update(1)
+
+        return data_frame
+
+    def deepbooru_keyframe(self, data_frame: pandas.DataFrame):
+        """
+        Deepbooru key frame
+
+        """
+        bar = tqdm(total=len(data_frame))
+        for index, row in data_frame.iterrows():
+            if row['frame'] <= 0:
+                continue
+            bar.set_description(f'Interrogate key frame {row["frame"]}')
+            frame = row['frame'] - 1
+            image = self.frames[frame]
+            image = Image.fromarray(image)
+            prompt = deepbooru.model.tag(image)
+            data_frame.at[index, 'prompt'] = prompt
+            bar.update(1)
+
+        return data_frame
+
+    def data_frame_select(self, event: gr.SelectData, data_frame: pandas.DataFrame):
+        row, col = event.index
+        row = data_frame.iloc[row]
+        frame = row['frame']
+        if 0 < frame <= self.frame_count:
+            return int(frame)
+        else:
+            return 0
+
+    def add_keyframe_click(self, data_frame: pandas.DataFrame, gr_frame_number: int):
+        """
+        Add a key frame to the data frame
+        """
         if gr_frame_number < 1:
             return data_frame
 
@@ -472,6 +530,8 @@ def on_ui_tabs():
                     if category not in {"accordions"}:
                         scripts.scripts_img2img.setup_ui_for_section(category)
 
+            for script in scripts.scripts_img2img.alwayson_scripts:
+                print(script.name, script.args_from, script.args_to, script.filename)
             mov2mov_gallery, result_video, generation_info, html_info, html_log = create_output_panel(id_part,
                                                                                                       opts.mov2mov_output_dir)
 
