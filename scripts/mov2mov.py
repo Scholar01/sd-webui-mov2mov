@@ -1,6 +1,6 @@
 import os.path
 import time
-
+import logging
 import cv2
 from PIL import Image
 from modules import shared, processing
@@ -101,9 +101,33 @@ def mov2mov(id_task: str,
     inpaint_full_res_padding = 32
     inpainting_mask_invert = 0
 
-    p = StableDiffusionProcessingImg2Img(
+    process = processing.StableDiffusionProcessingImg2Img
+    try:
+        # DirectML Fork to import and use subclasses *ONNXStableDiffusionProcessingImg2Img
+        # https://github.com/lshqqytiger/stable-diffusion-webui-directml/blob/e9afd9aed55da48dfc917753e2daa114a515a85b/modules/sd_onnx.py#L465
+        # Similar import in fork's img2img.py
+        # https://github.com/lshqqytiger/stable-diffusion-webui-directml/blob/e9afd9aed55da48dfc917753e2daa114a515a85b/modules/img2img.py#L162C41-L162C41
+        from modules.sd_onnx import BaseONNXModel
+        if isinstance(shared.sd_model, BaseONNXModel):
+            from modules.sd_onnx import ONNXStableDiffusionProcessingImg2Img
+
+            process = ONNXStableDiffusionProcessingImg2Img
+            if shared.sd_model.is_optimized:
+                from modules.sd_olive import (
+                    OptimizedONNXStableDiffusionProcessingImg2Img,
+                )
+
+                process = OptimizedONNXStableDiffusionProcessingImg2Img
+            logging.info("Using ONNX model for DirectML")
+        
+    except:
+        logging.info("Failed to load ONNX model for DirectML")
+
+    p = process(
         sd_model=shared.sd_model,
-        outpath_samples=shared.opts.data.get("mov2mov_outpath_samples", mov2mov_outpath_samples),
+        outpath_samples=shared.opts.data.get(
+            "mov2mov_outpath_samples", mov2mov_outpath_samples
+        ),
         outpath_grids=opts.outdir_grids or opts.outdir_img2img_grids,
         prompt=prompt,
         negative_prompt=negative_prompt,
@@ -117,7 +141,6 @@ def mov2mov(id_task: str,
         height=height,
         init_images=[None],
         mask=None,
-
         mask_blur=mask_blur,
         inpainting_fill=inpainting_fill,
         resize_mode=resize_mode,
@@ -127,8 +150,7 @@ def mov2mov(id_task: str,
         inpaint_full_res_padding=inpaint_full_res_padding,
         inpainting_mask_invert=inpainting_mask_invert,
         override_settings=override_settings,
-        initial_noise_multiplier=noise_multiplier
-
+        initial_noise_multiplier=noise_multiplier,
     )
 
     p.scripts = scripts.scripts_img2img
