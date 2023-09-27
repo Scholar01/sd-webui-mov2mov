@@ -11,6 +11,7 @@ import modules.scripts as scripts
 from scripts.m2m_util import get_mov_all_images, images_to_video
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
 from modules.ui import plaintext_to_html
+from scripts.module_ui_extensions import scripts_mov2mov
 
 
 def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, args):
@@ -44,7 +45,7 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ar
         img = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB), 'RGB')
 
         p.init_images = [img] * p.batch_size
-        proc = scripts.scripts_img2img.run(p, *args)
+        proc = scripts_mov2mov.run(p, *args)
         if proc is None:
             print(f'current progress: {i + 1}/{max_frames}')
             processed = process_images(p)
@@ -131,7 +132,7 @@ def mov2mov(id_task: str,
 
     )
 
-    p.scripts = scripts.scripts_img2img
+    p.scripts = scripts_mov2mov
     p.script_args = args
 
     if not enable_refiner or refiner_checkpoint in (None, "", "None"):
