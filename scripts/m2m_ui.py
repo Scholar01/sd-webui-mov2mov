@@ -22,6 +22,7 @@ from scripts import m2m_hook as patches
 from scripts import m2m_util
 from scripts import mov2mov
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
+from scripts.module_ui_extensions import scripts_mov2mov
 from scripts.movie_editor import MovieEditor
 
 id_part = "mov2mov"
@@ -223,6 +224,9 @@ def create_refiner():
 
 
 def on_ui_tabs():
+    scripts_mov2mov = scripts.ScriptRunner()
+    scripts_mov2mov.initialize_scripts(is_img2img=True)
+
     # with gr.Blocks(analytics_enabled=False) as mov2mov_interface:
     with gr.TabItem('mov2mov', id=f"tab_{id_part}", elem_id=f"tab_{id_part}") as mov2mov_interface:
         toprow = Toprow(is_img2img=False, id_part=id_part)
@@ -238,9 +242,8 @@ def on_ui_tabs():
                 with FormRow():
                     resize_mode = gr.Radio(label="Resize mode", elem_id=f"{id_part}_resize_mode",
                                            choices=["Just resize", "Crop and resize", "Resize and fill",
-                                                    "Just resize (latent upscale)"], type="index",
-                                           value="Just resize")
-                scripts.scripts_img2img.prepare_ui()
+                                                    "Just resize (latent upscale)"], type="index", value="Just resize")
+                scripts_mov2mov.prepare_ui()
 
                 for category in ordered_ui_categories():
                     if category == "sampler":
@@ -251,8 +254,7 @@ def on_ui_tabs():
                         with FormRow():
                             with gr.Column(elem_id=f"{id_part}_column_size", scale=4):
                                 with gr.Tabs():
-                                    with gr.Tab(label="Resize to",
-                                                elem_id=f"{id_part}_tab_resize_to") as tab_scale_to:
+                                    with gr.Tab(label="Resize to", elem_id=f"{id_part}_tab_resize_to") as tab_scale_to:
                                         with FormRow():
                                             with gr.Column(elem_id=f"{id_part}_column_size", scale=4):
                                                 width = gr.Slider(minimum=64, maximum=2048, step=8, label="Width",
@@ -304,8 +306,6 @@ def on_ui_tabs():
                         with gr.Row(elem_id=f"{id_part}_accordions", elem_classes="accordions"):
                             enable_refiner, refiner_checkpoint, refiner_switch_at = create_refiner()
 
-
-
                     elif category == "override_settings":
                         with FormRow(elem_id=f"{id_part}_override_settings_row") as row:
                             override_settings = create_override_settings_dropdown('mov2mov', row)
@@ -313,11 +313,11 @@ def on_ui_tabs():
                     elif category == "scripts":
                         editor = MovieEditor(id_part, init_mov, movie_frames)
                         editor.render()
-                        with FormGroup(elem_id="img2img_script_container"):
-                            custom_inputs = scripts.scripts_img2img.setup_ui()
+                        with FormGroup(elem_id=f"{id_part}_script_container"):
+                            custom_inputs = scripts_mov2mov.setup_ui()
 
                     if category not in {"accordions"}:
-                        scripts.scripts_img2img.setup_ui_for_section(category)
+                        scripts_mov2mov.setup_ui_for_section(category)
 
             mov2mov_gallery, result_video, generation_info, html_info, html_log = create_output_panel(id_part,
                                                                                                       opts.mov2mov_output_dir)
