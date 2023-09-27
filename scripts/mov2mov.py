@@ -1,16 +1,21 @@
 import os.path
+import platform
 import time
 
 import cv2
+import numpy as np
+import pandas
 from PIL import Image
 from modules import shared, processing
 from modules.generation_parameters_copypaste import create_override_settings_dict
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, Processed
 from modules.shared import opts, state
+from modules.ui import plaintext_to_html
 import modules.scripts as scripts
+
 from scripts.m2m_util import get_mov_all_images, images_to_video
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
-from modules.ui import plaintext_to_html
+
 
 
 def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, args):
@@ -67,6 +72,92 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ar
     return video
 
 
+def process_keyframes(p, mov_file, fps, df, controlnet_module, controlnet_model, args):
+    pass
+    # processing.fix_seed(p)
+    # images = get_mov_all_images(mov_file, fps)
+    # if not images:
+    #     print('Failed to parse the video, please check')
+    #     return
+    #
+    # default_prompt = p.prompt
+    #
+    # # 先生成一张风格图
+    # row = df.iloc[0]
+    # p.prompt = default_prompt + row['prompt']
+    # frame = images[row['frame'] - 1]
+    # img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 'RGB')
+    # p.init_images = [img]
+    # processed = process_images(p)
+    # # 只取第一张
+    # style = processed.images[0]
+    # style = np.asarray(style)
+    #
+    # # 保存一个初始的controlnet
+    # cn = controlnet_extensions.get_process_controlnet(p)
+    #
+    # generate_images = []
+    # p.do_not_save_grid = True
+    # state.job_count = len(df)  # * p.n_iter
+    # for i, row in df.iterrows():
+    #     p.prompt = default_prompt + row['prompt']
+    #     frame = images[row['frame'] - 1]
+    #     state.job = f"{i + 1} out of {len(df)}"
+    #     if state.skipped:
+    #         state.skipped = False
+    #
+    #     if state.interrupted:
+    #         break
+    #
+    #     img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 'RGB')
+    #     p.init_images = [img] * p.batch_size
+    #
+    #     # 介入controlnet
+    #     print('insert controlnet ip-adapter')
+    #     # 获取controlnet process参数
+    #     units = [
+    #         {
+    #             "module": controlnet_module,
+    #             "model": controlnet_model,
+    #             "weight": 1.0,
+    #             "pixel_perfect": True,
+    #             "guidance_start": 0.0,
+    #             "guidance_end": 1.0,
+    #             "processor_res": 512,
+    #             'image': style,
+    #         }
+    #     ]
+    #
+    #     controlnet_extensions.extend_units(p, cn, units)
+    #
+    #     proc = scripts.scripts_img2img.run(p, *args)
+    #     if proc is None:
+    #         print(f'current progress: {i + 1}/{len(df)}')
+    #         processed = process_images(p)
+    #         # 只取第一张
+    #         gen_image = processed.images[0]
+    #         generate_images.append(gen_image)
+    #         style = np.asarray(gen_image)
+    # # 还原cn
+    # controlnet_extensions.extend_units(p, cn, [])
+    #
+    # if not os.path.exists(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir)):
+    #     os.makedirs(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir), exist_ok=True)
+    #
+    # return images_to_video(generate_images, fps,
+    #                        os.path.join(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir),
+    #                                     str(int(time.time())) + '.mp4', ))
+
+
+def check_data_frame(df: pandas.DataFrame):
+    # 删除df的frame值为0的行
+    df = df[df['frame'] > 0]
+
+    # 判断df是否为空
+    if len(df) <= 0:
+        return False
+
+    return True
 
 
 def mov2mov(id_task: str,
@@ -86,11 +177,16 @@ def mov2mov(id_task: str,
 
             # refiner
             enable_refiner, refiner_checkpoint, refiner_switch_at,
+            # mov2mov params
 
             noise_multiplier,
             movie_frames,
             max_frames,
-
+            # editor
+            enable_movie_editor,
+            df: pandas.DataFrame,
+            controlnet_preprocessor,
+            controlnet_model,
             *args):
     if not mov_file:
         raise Exception('Error！ Please add a video file!')
@@ -148,10 +244,27 @@ def mov2mov(id_task: str,
 
     p.extra_generation_params["Mask blur"] = mask_blur
 
-    print(f'\nStart parsing the number of mov frames')
+    if not enable_movie_editor:
+        print(f'\nStart parsing the number of mov frames')
+        generate_video = process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, width, height, args)
+        processed = Processed(p, [], p.seed, "")
+    else:
+        # editor
+        if platform.system() != 'Windows':
+            raise Exception('The editor is currently only supported on Windows')
 
-    generate_video = process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, width, height, args)
-    processed = Processed(p, [], p.seed, "")
+        # check df no frame
+        if not check_data_frame(df):
+            raise Exception('Please add a frame')
+
+        # sort df for index
+        df = df.sort_values(by='frame').reset_index(drop=True)
+
+        # generate keyframes
+        print(f'Start generate keyframes')
+        # generate_video = process_keyframes(p, mov_file, movie_frames, df, controlnet_preprocessor, controlnet_model,
+        #                                    args)
+        # processed = Processed(p, [], p.seed, "")
     p.close()
 
     shared.total_tqdm.clear()
