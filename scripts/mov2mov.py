@@ -1,6 +1,7 @@
 import os.path
 import platform
 import time
+import modules
 
 import cv2
 import numpy as np
@@ -16,6 +17,7 @@ import modules.scripts as scripts
 from scripts.m2m_util import get_mov_all_images, images_to_video
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
 from scripts.module_ui_extensions import scripts_mov2mov
+from ebsynth import EbsynthGenerate, Keyframe
 
 
 def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, args):
@@ -104,9 +106,10 @@ def process_keyframes(p, mov_file, fps, df, args):
             print(f'current progress: {i + 1}/{max_frames}')
             processed = process_images(p)
             gen_image = processed.images[0]
-            generate_images.append(gen_image)
+            keyframe = Keyframe(row['frame'], np.asarray(gen_image), row['prompt'])
+            generate_images.append(keyframe)
 
-    return generate_images
+    return generate_images, images
 
 
 def check_data_frame(df: pandas.DataFrame):
@@ -222,7 +225,9 @@ def mov2mov(id_task: str,
 
         # generate keyframes
         print(f'Start generate keyframes')
-        generate_images = process_keyframes(p, mov_file, movie_frames, df, args)
+        keyframes, frames = process_keyframes(p, mov_file, movie_frames, df, args)
+        eb_generate = EbsynthGenerate(keyframes, frames, movie_frames)
+
         processed = Processed(p, [], p.seed, "")
     p.close()
 
