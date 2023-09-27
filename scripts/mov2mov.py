@@ -72,81 +72,41 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ar
     return video
 
 
-def process_keyframes(p, mov_file, fps, df, controlnet_module, controlnet_model, args):
-    pass
-    # processing.fix_seed(p)
-    # images = get_mov_all_images(mov_file, fps)
-    # if not images:
-    #     print('Failed to parse the video, please check')
-    #     return
-    #
-    # default_prompt = p.prompt
-    #
-    # # 先生成一张风格图
-    # row = df.iloc[0]
-    # p.prompt = default_prompt + row['prompt']
-    # frame = images[row['frame'] - 1]
-    # img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 'RGB')
-    # p.init_images = [img]
-    # processed = process_images(p)
-    # # 只取第一张
-    # style = processed.images[0]
-    # style = np.asarray(style)
-    #
-    # # 保存一个初始的controlnet
-    # cn = controlnet_extensions.get_process_controlnet(p)
-    #
-    # generate_images = []
-    # p.do_not_save_grid = True
-    # state.job_count = len(df)  # * p.n_iter
-    # for i, row in df.iterrows():
-    #     p.prompt = default_prompt + row['prompt']
-    #     frame = images[row['frame'] - 1]
-    #     state.job = f"{i + 1} out of {len(df)}"
-    #     if state.skipped:
-    #         state.skipped = False
-    #
-    #     if state.interrupted:
-    #         break
-    #
-    #     img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 'RGB')
-    #     p.init_images = [img] * p.batch_size
-    #
-    #     # 介入controlnet
-    #     print('insert controlnet ip-adapter')
-    #     # 获取controlnet process参数
-    #     units = [
-    #         {
-    #             "module": controlnet_module,
-    #             "model": controlnet_model,
-    #             "weight": 1.0,
-    #             "pixel_perfect": True,
-    #             "guidance_start": 0.0,
-    #             "guidance_end": 1.0,
-    #             "processor_res": 512,
-    #             'image': style,
-    #         }
-    #     ]
-    #
-    #     controlnet_extensions.extend_units(p, cn, units)
-    #
-    #     proc = scripts.scripts_img2img.run(p, *args)
-    #     if proc is None:
-    #         print(f'current progress: {i + 1}/{len(df)}')
-    #         processed = process_images(p)
-    #         # 只取第一张
-    #         gen_image = processed.images[0]
-    #         generate_images.append(gen_image)
-    #         style = np.asarray(gen_image)
-    # # 还原cn
-    # controlnet_extensions.extend_units(p, cn, [])
-    #
-    # if not os.path.exists(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir)):
-    #     os.makedirs(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir), exist_ok=True)
-    #
-    # return images_to_video(generate_images, fps,
-    #                        os.path.join(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir),
-    #                                     str(int(time.time())) + '.mp4', ))
+def process_keyframes(p, mov_file, fps, df, args):
+    processing.fix_seed(p)
+    images = get_mov_all_images(mov_file, fps)
+    if not images:
+        print('Failed to parse the video, please check')
+        return
+
+    default_prompt = p.prompt
+    max_frames = len(df)
+
+    p.do_not_save_grid = True
+    state.job_count = max_frames  # * p.n_iter
+    generate_images = []
+
+    for i, row in df.iterrows():
+        p.prompt = default_prompt + row['prompt']
+        frame = images[row['frame'] - 1]
+
+        state.job = f"{i + 1} out of {max_frames}"
+        if state.skipped:
+            state.skipped = False
+
+        if state.interrupted:
+            break
+
+        img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 'RGB')
+        p.init_images = [img]
+        proc = scripts_mov2mov.run(p, *args)
+        if proc is None:
+            print(f'current progress: {i + 1}/{max_frames}')
+            processed = process_images(p)
+            gen_image = processed.images[0]
+            generate_images.append(gen_image)
+
+    return generate_images
 
 
 def check_data_frame(df: pandas.DataFrame):
@@ -230,6 +190,7 @@ def mov2mov(id_task: str,
 
     p.scripts = scripts_mov2mov
     p.script_args = args
+    print('script_args', args)
 
     if not enable_refiner or refiner_checkpoint in (None, "", "None"):
         p.refiner_checkpoint = None
@@ -261,9 +222,8 @@ def mov2mov(id_task: str,
 
         # generate keyframes
         print(f'Start generate keyframes')
-        # generate_video = process_keyframes(p, mov_file, movie_frames, df, controlnet_preprocessor, controlnet_model,
-        #                                    args)
-        # processed = Processed(p, [], p.seed, "")
+        generate_images = process_keyframes(p, mov_file, movie_frames, df, args)
+        processed = Processed(p, [], p.seed, "")
     p.close()
 
     shared.total_tqdm.clear()

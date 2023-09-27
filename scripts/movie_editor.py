@@ -220,6 +220,11 @@ class MovieEditor:
             return gr.Image.update(visible=False), gr.Slider.update(maximum=0, minimum=0), gr.Slider.update()
         fps = m2m_util.get_mov_fps(movie_path)
         self.frames = m2m_util.get_mov_all_images(movie_path, fps, True)
+        # 循环写到文件
+        # for i, frame in enumerate(self.frames):
+        #     frame = Image.fromarray(frame)
+        #     frame.save('C:\\Users\\131\\Desktop\\ebsynth\\SampleProject\\video\\' + str(i).rjust(4, '0') + '.png')
+
         self.frame_count = len(self.frames)
         return (gr.Image.update(visible=True),
                 gr.Slider.update(maximum=self.frame_count, minimum=0, value=0),
