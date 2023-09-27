@@ -144,7 +144,6 @@
 }
 
 
-
 #mov2mov_checkboxes {
     margin-bottom: 0.5em;
     margin-left: 0em;
@@ -161,6 +160,13 @@
 }
 
 /* dataframe */
-#mov2mov_video_editor_custom_data_frame button{
+#mov2mov_video_editor_custom_data_frame button {
     display: none;
+}
+
+#mov2mov_keyframe_custom_container>div {
+    display: flex;
+    justify-content: center;
+    /*增加间距*/
+    gap: 1.5em;
 }

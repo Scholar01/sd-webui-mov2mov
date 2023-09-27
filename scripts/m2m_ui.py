@@ -140,32 +140,49 @@ class MovieEditor:
         self.is_windows = platform.system() == "Windows"
         self.frames = []
         self.frame_count = 0
+        self.selected_data_frame = -1
 
     def render(self):
         with InputAccordion(True, label="Movie Editor",
                             elem_id=f"{id_part}_editor_enable") as enable_movie_editor:
             self.gr_enable_movie_editor = enable_movie_editor
-            self.gr_frame_image = gr.Image(label="Frame", elem_id=f"{id_part}_video_frame", source="upload",
-                                           visible=False, height=480)
-
             gr.HTML(
                 "<div style='color:red;font-weight: bold;border: 2px solid yellow;padding: 10px;font-size: 20px; '>"
                 "This feature is in beta version!!! </br>"
                 "It only supports Windows!!! </br>"
                 "Make sure you have installed the controlnet and T2I-Adapter models."
                 "</div>")
-            with gr.Row():
-                self.gr_frame_number = gr.Slider(label="Frame number", elem_id=f"{id_part}_video_frame_number", step=1,
-                                                 maximum=0, minimum=0)
-                add_keyframe = ToolButton('\U00002795', elem_id=f'{id_part}_video_editor_add_keyframe',
-                                          visible=True,
-                                          tooltip="Add Key Frame")
-            # with gr.Row():
-            #     with gr.Column():
-            #         gr.Checkbox(label="remove background", elem_id=f"{id_part}_video_editor_remove_background",
-            #                     value=True)
-            # gr.Checkbox(label="interrogate key frame", elem_id=f"{id_part}_video_editor_interrogate_key_frame",
-            #             value=True)
+
+            self.gr_frame_image = gr.Image(label="Frame", elem_id=f"{id_part}_video_frame", source="upload",
+                                           visible=False, height=480)
+
+            # key frame tabs
+            with gr.Tabs(elem_id=f"{id_part}_keyframe_tabs"):
+                with gr.TabItem("Custom", id=f"{id_part}_keyframe_tab_custom"):
+                    with gr.Row():
+                        self.gr_frame_number = gr.Slider(label="Frame number", elem_id=f"{id_part}_video_frame_number",
+                                                         step=1,
+                                                         maximum=0, minimum=0)
+                    with gr.Row(elem_id=f'{id_part}_keyframe_custom_container'):
+                        add_keyframe = ToolButton('✚', elem_id=f'{id_part}_video_editor_add_keyframe',
+                                                  visible=True,
+                                                  tooltip="Add keyframe")
+                        remove_keyframe = ToolButton('✖', elem_id=f'{id_part}_video_editor_remove_keyframe',
+                                                     visible=True,
+                                                     tooltip="Remove selected keyframe")
+
+                        clear_keyframe = ToolButton('🗑', elem_id=f'{id_part}_video_editor_clear_keyframe',
+                                                    visible=True,
+                                                    tooltip="Clear keyframe")
+
+                with gr.TabItem('Auto', elem_id=f'{id_part}_keyframe_tab_auto'):
+                    with gr.Row():
+                        key_frame_interval = gr.Slider(label="Key frame interval",
+                                                       elem_id=f"{id_part}_video_keyframe_interval", step=1,
+                                                       maximum=100, minimum=0, value=2)
+                        key_frame_interval_generate = ToolButton('♺', elem_id=f'{id_part}_video_editor_auto_keyframe',
+                                                                 visible=True,
+                                                                 tooltip="generate")
 
             with gr.Row():
                 data_frame = gr.Dataframe(
@@ -177,10 +194,6 @@ class MovieEditor:
                     height=480,
                     elem_id=f"{id_part}_video_editor_custom_data_frame",
                 )
-
-            with gr.Row():
-                data_frame_clear = gr.Button(value="Clear", size='sm',
-                                             elem_id=f"{id_part}_video_editor_data_frame_clear")
 
             with gr.Row():
                 interrogate = gr.Button(value="Clip Interrogate Keyframe", size='sm',
@@ -203,9 +216,15 @@ class MovieEditor:
 
         add_keyframe.click(fn=self.add_keyframe_click, inputs=[data_frame, self.gr_frame_number], outputs=[data_frame],
                            show_progress=False)
+        remove_keyframe.click(fn=self.remove_keyframe_click, inputs=[data_frame], outputs=[data_frame],
+                              show_progress=False)
 
-        data_frame_clear.click(fn=lambda df: df.drop(df.index, inplace=True), inputs=[data_frame], outputs=[data_frame],
-                               show_progress=False)
+        clear_keyframe.click(fn=lambda df: df.drop(df.index, inplace=True), inputs=[data_frame], outputs=[data_frame],
+                             show_progress=False)
+
+        key_frame_interval_generate.click(fn=self.key_frame_interval_generate_click,
+                                          inputs=[data_frame, key_frame_interval],
+                                          outputs=[data_frame], show_progress=True)
 
         interrogate.click(fn=self.interrogate_keyframe, inputs=[data_frame],
                           outputs=[data_frame], show_progress=True)
@@ -252,6 +271,7 @@ class MovieEditor:
 
     def data_frame_select(self, event: gr.SelectData, data_frame: pandas.DataFrame):
         row, col = event.index
+        self.selected_data_frame = row
         row = data_frame.iloc[row]
         frame = row['frame']
         if 0 < frame <= self.frame_count:
@@ -284,9 +304,34 @@ class MovieEditor:
 
         return data_frame
 
+    def remove_keyframe_click(self, data_frame: pandas.DataFrame):
+        """
+        Remove the selected key frame
+        """
+        if self.selected_data_frame < 0:
+            return data_frame
+
+        data_frame = data_frame.drop(self.selected_data_frame)
+
+        data_frame = data_frame.sort_values(by='frame').reset_index(drop=True)
+
+        data_frame['id'] = range(len(data_frame))
+
+        return data_frame
+
+    def key_frame_interval_generate_click(self, data_frame: pandas.DataFrame, key_frame_interval: int):
+        if key_frame_interval < 1:
+            return data_frame
+
+        # 按照key_frame_interval的间隔添加关键帧
+        for i in range(0, self.frame_count, key_frame_interval):
+            data_frame = self.add_keyframe_click(data_frame, i + 1)
+
+        return data_frame
+
     def movie_change(self, movie_path):
         if not movie_path:
-            return gr.Image.update(visible=False), gr.Slider.update(maximum=0, minimum=0)
+            return gr.Image.update(visible=False), gr.Slider.update(maximum=0, minimum=0), gr.Slider.update()
         fps = m2m_util.get_mov_fps(movie_path)
         self.frames = m2m_util.get_mov_all_images(movie_path, fps, True)
         self.frame_count = len(self.frames)
