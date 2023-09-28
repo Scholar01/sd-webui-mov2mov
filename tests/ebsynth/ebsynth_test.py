@@ -41,12 +41,37 @@ class MyTestCase(unittest.TestCase):
             if not os.path.exists(dir_name):
                 os.mkdir(dir_name)
             cv2.imwrite(os.path.join(dir_name, f'{task.frame_num:04d}.png'), result)
-            self.eb_generate.append_generate_frames(task.key_frame_num, task.frame_num, result)
-        frames = self.eb_generate.merge_generate_frames()
-        if not os.path.exists(os.path.join(os.path.dirname(__file__), 'images', 'test', 'merge')):
-            os.mkdir(os.path.join(os.path.dirname(__file__), 'images', 'test', 'merge'))
-        for i, frame in enumerate(frames):
-            cv2.imwrite(os.path.join(os.path.dirname(__file__), 'images', 'test', 'merge', f'{i:04d}.png'), frame)
+
+    def test_merge(self):
+        """
+        测试merge是否正确
+
+        """
+
+        def get_sequence(keyframe_num):
+            for sequence in self.eb_generate.sequences:
+                if sequence.keyframe.num == keyframe_num:
+                    return sequence
+            else:
+                raise ValueError(f'not found key frame num {keyframe_num}')
+
+        # 模拟结果
+        test_dir = os.path.join(os.path.dirname(__file__), 'images', 'test')
+
+        # 获取out_{keyframe}文件夹
+        for keyframe in self.keyframes:
+            out_dir = os.path.join(test_dir, f'out_{keyframe.num}')
+            # 获取out_{keyframe}文件夹下的所有文件,并且按照 {i:04d}.png 的顺序添加到eb_generate.generate_frames
+            sequence = get_sequence(keyframe.num)
+            for i in range(sequence.start, sequence.end + 1):
+                self.eb_generate.append_generate_frames(keyframe.num, i,
+                                                        cv2.imread(os.path.join(out_dir, f'{i:04d}.png')))
+        # 测试merge
+        result = self.eb_generate.merge_sequences(0.4)
+        if not os.path.exists(os.path.join(test_dir, 'merge_1')):
+            os.mkdir(os.path.join(test_dir, 'merge_1'))
+        for i, frame in enumerate(result):
+            cv2.imwrite(os.path.join(test_dir, 'merge_1', f'{i:04d}.png'), frame)
 
 
 if __name__ == '__main__':
