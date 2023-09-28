@@ -223,7 +223,6 @@ def create_refiner():
 
 
 def on_ui_tabs():
-    scripts_mov2mov = scripts.ScriptRunner()
     scripts_mov2mov.initialize_scripts(is_img2img=True)
 
     # with gr.Blocks(analytics_enabled=False) as mov2mov_interface:
