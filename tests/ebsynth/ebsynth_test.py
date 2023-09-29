@@ -9,6 +9,7 @@ utils.setup_test_env()
 
 from ebsynth.ebsynth_generate import EbsynthGenerate, Keyframe, Sequence
 from ebsynth._ebsynth import task as EbsyncthRun
+from scripts import m2m_util
 
 
 class MyTestCase(unittest.TestCase):
@@ -17,7 +18,7 @@ class MyTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         self.keyframes = [Keyframe(i, self.get_image('keys', f'{i:04d}.png'), '') for i in range(1, 72, 10)]
-        frames = [self.get_image('video', f'{i:04d}.png') for i in range(0, 73)]
+        frames = [self.get_image('video', f'{i:04d}.png') for i in range(0, 72)]
 
         self.eb_generate = EbsynthGenerate(self.keyframes, frames, 24)
 
@@ -60,7 +61,7 @@ class MyTestCase(unittest.TestCase):
 
         # 获取out_{keyframe}文件夹
         for keyframe in self.keyframes:
-            out_dir = os.path.join(test_dir, f'out_{keyframe.num}')
+            out_dir = os.path.join(test_dir, f'out_{keyframe.num:04d}')
             # 获取out_{keyframe}文件夹下的所有文件,并且按照 {i:04d}.png 的顺序添加到eb_generate.generate_frames
             sequence = get_sequence(keyframe.num)
             for i in range(sequence.start, sequence.end + 1):
@@ -68,10 +69,18 @@ class MyTestCase(unittest.TestCase):
                                                         cv2.imread(os.path.join(out_dir, f'{i:04d}.png')))
         # 测试merge
         result = self.eb_generate.merge_sequences(0.4)
+
         if not os.path.exists(os.path.join(test_dir, 'merge_1')):
             os.mkdir(os.path.join(test_dir, 'merge_1'))
+
+        frames = []
+
         for i, frame in enumerate(result):
-            cv2.imwrite(os.path.join(test_dir, 'merge_1', f'{i:04d}.png'), frame)
+            if frame is not None:
+                cv2.imwrite(os.path.join(test_dir, 'merge_1', f'{i:04d}.png'), frame)
+                frames.append(frame)
+        m2m_util.images_to_video(frames, self.eb_generate.fps,
+                                 os.path.join(test_dir, 'merge_1', f'm.mp4'))
 
 
 if __name__ == '__main__':

@@ -224,7 +224,6 @@ def create_refiner():
 
 
 def on_ui_tabs():
-
     scripts_mov2mov.initialize_scripts(is_img2img=True)
 
     # with gr.Blocks(analytics_enabled=False) as mov2mov_interface:
@@ -358,6 +357,8 @@ def on_ui_tabs():
 
                            editor.gr_enable_movie_editor,
                            editor.gr_df,
+                           editor.gr_eb_weight,
+                           editor.gr_eb_merge_weight,
 
                        ] + custom_inputs,
                 outputs=[

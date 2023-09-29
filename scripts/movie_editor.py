@@ -12,6 +12,8 @@ from scripts import m2m_util
 
 class MovieEditor:
     def __init__(self, id_part, gr_movie: gr.Video, gr_fps: gr.Slider):
+        self.gr_eb_merge_weight = None
+        self.gr_eb_weight = None
         self.gr_df = None
         self.gr_keyframe = None
         self.gr_frame_number = None
@@ -86,6 +88,13 @@ class MovieEditor:
                                         elem_id=f"{id_part}_video_editor_interrogate")
                 deepbooru = gr.Button(value="Deepbooru Keyframe", size='sm',
                                       elem_id=f"{id_part}_video_editor_deepbooru")
+
+            with gr.Row():
+                self.gr_eb_weight = gr.Slider(label="EbSynth weight", elem_id=f"{id_part}_video_eb_weight", step=0.1,
+                                              maximum=10, minimum=0, value=1)
+                self.gr_eb_merge_weight = gr.Slider(label="EbSynth merge weight",
+                                                    elem_id=f"{id_part}_video_eb_merge_weight", step=0.1,
+                                                    maximum=1, minimum=0, value=0.3)
 
         self.gr_movie.change(fn=self.movie_change, inputs=[self.gr_movie],
                              outputs=[self.gr_frame_image, self.gr_frame_number, self.gr_fps],
@@ -212,6 +221,9 @@ class MovieEditor:
         # 按照key_frame_interval的间隔添加关键帧
         for i in range(0, self.frame_count, key_frame_interval):
             data_frame = self.add_keyframe_click(data_frame, i + 1)
+
+        # 添加最后一帧
+        data_frame = self.add_keyframe_click(data_frame, self.frame_count)
 
         return data_frame
 

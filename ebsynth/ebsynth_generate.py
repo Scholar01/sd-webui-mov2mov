@@ -62,7 +62,7 @@ class EbsynthGenerate:
         tasks = []
         for i, sequence in enumerate(self.sequences):
             frames = sequence.frames.items()
-            source = sequence.frames[sequence.start]
+            source = sequence.frames[sequence.keyframe.num]
             style = sequence.keyframe.image
             for frame_num, frame in frames:
                 target = frame
@@ -91,6 +91,7 @@ class EbsynthGenerate:
     def merge_sequences(self, weight: float = 0.5):
         # 存储合并后的结果
         merged_frames = []
+        border = 1
         for i in range(len(self.sequences)):
             current_seq = self.sequences[i]
             next_seq = self.sequences[i + 1] if i + 1 < len(self.sequences) else None
@@ -99,16 +100,16 @@ class EbsynthGenerate:
             if next_seq:
                 # 获取两个序列的帧交集
                 common_frames_nums = set(current_seq.frames.keys()).intersection(
-                    set(range(next_seq.start, next_seq.end)))
+                    set(range(next_seq.start + border, next_seq.end)) if i > 0 else set(
+                        range(next_seq.start, next_seq.end)))
 
                 for j, frame_num in enumerate(common_frames_nums):
                     # 从两个序列中获取帧并合并
                     frame1 = current_seq.generate_frames[frame_num]
                     frame2 = next_seq.generate_frames[frame_num]
 
-                    # 这里假设我们只是简单地将两个帧加在一起，您可能需要更复杂的合并逻辑
-
-                    merged_frame = cv2.addWeighted(frame1, weight, frame2, 1 - weight, 0)
+                    weight = float(j) / float(len(common_frames_nums))
+                    merged_frame = cv2.addWeighted(frame1, 1 - weight, frame2, weight, 0)
                     merged_frames.append((frame_num, merged_frame))
 
             # 如果没有下一个序列
@@ -123,22 +124,20 @@ class EbsynthGenerate:
                 for frame_num in difference_frames_nums:
                     merged_frames.append((frame_num, current_seq.generate_frames[frame_num]))
 
-        group_merged_frames = groupby(lambda x: x[0], merged_frames)
-        merged_frames.clear()
-        # 取出value长度大于1的元素
-        for key, value in group_merged_frames.items():
-            if len(value) > 1:
-                # 将value中的所有元素合并
-                merged_frame = value[0][1]
-                for i in range(1, len(value)):
-                    merged_frame = cv2.addWeighted(merged_frame, weight, value[i][1], 1 - weight, 0)
-                merged_frames.append((key, merged_frame))
-            else:
-                merged_frames.append((key, value[0][1]))
+        # group_merged_frames = groupby(lambda x: x[0], merged_frames)
+        # merged_frames.clear()
+        # # 取出value长度大于1的元素
+        # for key, value in group_merged_frames.items():
+        #     if len(value) > 1:
+        #         # 将value中的所有元素合并
+        #         merged_frame = value[0][1]
+        #         for i in range(1, len(value)):
+        #             merged_frame = cv2.addWeighted(merged_frame, weight, value[i][1], 1 - weight, 0)
+        #         merged_frames.append((key, merged_frame))
+        #     else:
+        #         merged_frames.append((key, value[0][1]))
         result = []
         for i, frame in sorted(merged_frames, key=lambda x: x[0]):
             result.append(frame)
-
-        # todo 起始关键帧和结束关键帧,然后source应该根据keyframe做一次插值
 
         return result
