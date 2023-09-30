@@ -1,3 +1,4 @@
+import importlib
 import os
 import platform
 import shutil
@@ -413,3 +414,4 @@ origin_block_context_init = patches.patch(__name__, obj=gr.blocks.BlockContext, 
 script_callbacks.on_before_reload(on_app_reload)
 script_callbacks.on_ui_settings(on_ui_settings)
 # script_callbacks.on_ui_tabs(on_ui_tabs)
+
