@@ -1,17 +1,55 @@
 import os.path
+import platform
 import time
 
+import PIL.Image
+from tqdm import tqdm
+
+import modules
+
 import cv2
+import numpy as np
+import pandas
 from PIL import Image
 from modules import shared, processing
 from modules.generation_parameters_copypaste import create_override_settings_dict
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, Processed
 from modules.shared import opts, state
+from modules.ui import plaintext_to_html
 import modules.scripts as scripts
+
 from scripts.m2m_util import get_mov_all_images, images_to_video
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
-from modules.ui import plaintext_to_html
 from scripts.module_ui_extensions import scripts_mov2mov
+import modules
+from ebsynth import EbsynthGenerate, Keyframe
+
+
+def check_data_frame(df: pandas.DataFrame):
+    # 删除df的frame值为0的行
+    df = df[df['frame'] > 0]
+
+    # 判断df是否为空
+    if len(df) <= 0:
+        return False
+
+    return True
+
+
+def save_video(images, fps, extension='.mp4'):
+    if not os.path.exists(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir)):
+        os.makedirs(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir), exist_ok=True)
+
+    r_f = extension
+
+    print(f'Start generating {r_f} file')
+
+    video = images_to_video(images, fps,
+                            os.path.join(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir),
+                                         str(int(time.time())) + r_f, ))
+    print(f'The generation is complete, the directory::{video}')
+
+    return video
 
 
 def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, args):
@@ -53,18 +91,76 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ar
             gen_image = processed.images[0]
             generate_images.append(gen_image)
 
-    if not os.path.exists(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir)):
-        os.makedirs(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir), exist_ok=True)
+    video = save_video(generate_images, movie_frames)
 
-    r_f = '.mp4'
+    return video
 
-    print(f'Start generating {r_f} file')
 
-    video = images_to_video(generate_images, movie_frames,
-                            os.path.join(shared.opts.data.get("mov2mov_output_dir", mov2mov_output_dir),
-                                         str(int(time.time())) + r_f, ))
-    print(f'The generation is complete, the directory::{video}')
+def process_keyframes(p, mov_file, fps, df, args):
+    processing.fix_seed(p)
+    images = get_mov_all_images(mov_file, fps)
+    if not images:
+        print('Failed to parse the video, please check')
+        return
 
+    # 通过宽高,缩放模式,预处理图片
+    images = [PIL.Image.fromarray(image) for image in images]
+    images = [modules.images.resize_image(p.resize_mode, image, p.width, p.height) for image in images]
+    images = [np.asarray(image) for image in images]
+
+    default_prompt = p.prompt
+    max_frames = len(df)
+
+    p.do_not_save_grid = True
+    state.job_count = max_frames  # * p.n_iter
+    generate_images = []
+
+    for i, row in df.iterrows():
+        p.prompt = default_prompt + row['prompt']
+        frame = images[row['frame'] - 1]
+
+        state.job = f"{i + 1} out of {max_frames}"
+        if state.skipped:
+            state.skipped = False
+
+        if state.interrupted:
+            break
+
+        img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 'RGB')
+        p.init_images = [img]
+        proc = scripts_mov2mov.run(p, *args)
+        if proc is None:
+            print(f'current progress: {i + 1}/{max_frames}')
+            processed = process_images(p)
+            gen_image = processed.images[0]
+            keyframe = Keyframe(row['frame'], np.asarray(gen_image), row['prompt'])
+            generate_images.append(keyframe)
+
+    return generate_images, images
+
+
+def process_mov2mov_ebsynth(p, eb_generate, weight=4.0, merge_weight=0.4):
+    from ebsynth._ebsynth import task as EbsyncthRun
+    tasks = eb_generate.get_tasks(weight)
+    tasks_len = len(tasks)
+    state.job_count = tasks_len  # * p.n_iter
+
+    for i, task in tqdm(enumerate(tasks)):
+
+        state.job = f"{i + 1} out of {tasks_len}"
+        if state.skipped:
+            state.skipped = False
+
+        if state.interrupted:
+            break
+
+        result = EbsyncthRun(task.style, [(task.source, task.target, task.weight)])
+        eb_generate.append_generate_frames(task.key_frame_num, task.frame_num, result)
+        state.nextjob()
+
+    print(f'Start merge frames')
+    result = eb_generate.merge_sequences(merge_weight)
+    video = save_video(result, eb_generate.fps)
     return video
 
 
@@ -85,10 +181,16 @@ def mov2mov(id_task: str,
 
             # refiner
             enable_refiner, refiner_checkpoint, refiner_switch_at,
+            # mov2mov params
 
             noise_multiplier,
             movie_frames,
             max_frames,
+            # editor
+            enable_movie_editor,
+            df: pandas.DataFrame,
+            eb_weight,
+            eb_merge_weight,
 
             *args):
     if not mov_file:
@@ -134,6 +236,7 @@ def mov2mov(id_task: str,
 
     p.scripts = scripts_mov2mov
     p.script_args = args
+    print('script_args', args)
 
     if not enable_refiner or refiner_checkpoint in (None, "", "None"):
         p.refiner_checkpoint = None
@@ -147,10 +250,31 @@ def mov2mov(id_task: str,
 
     p.extra_generation_params["Mask blur"] = mask_blur
 
-    print(f'\nStart parsing the number of mov frames')
+    if not enable_movie_editor:
+        print(f'\nStart parsing the number of mov frames')
+        generate_video = process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, width, height, args)
+        processed = Processed(p, [], p.seed, "")
+    else:
+        # editor
+        if platform.system() != 'Windows':
+            raise Exception('The editor is currently only supported on Windows')
 
-    generate_video = process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, width, height, args)
-    processed = Processed(p, [], p.seed, "")
+        # check df no frame
+        if not check_data_frame(df):
+            raise Exception('Please add a frame')
+
+        # sort df for index
+        df = df.sort_values(by='frame').reset_index(drop=True)
+
+        # generate keyframes
+        print(f'Start generate keyframes')
+        keyframes, frames = process_keyframes(p, mov_file, movie_frames, df, args)
+        eb_generate = EbsynthGenerate(keyframes, frames, movie_frames)
+        print(f'\nStart generate frames')
+
+        generate_video = process_mov2mov_ebsynth(p, eb_generate, weight=eb_weight, merge_weight=eb_merge_weight)
+
+        processed = Processed(p, [], p.seed, "")
     p.close()
 
     shared.total_tqdm.clear()

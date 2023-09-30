@@ -137,6 +137,13 @@
     min-height: 480px;
 }
 
+#mov2mov_video_frame img {
+    height: 480px;
+    max-height: 480px;
+    min-height: 480px;
+}
+
+
 #mov2mov_checkboxes {
     margin-bottom: 0.5em;
     margin-left: 0em;
@@ -150,4 +157,16 @@
 
 #mov2mov_extra_view {
     width: auto;
+}
+
+/* dataframe */
+#mov2mov_video_editor_custom_data_frame button {
+    display: none;
+}
+
+#mov2mov_keyframe_custom_container>div {
+    display: flex;
+    justify-content: center;
+    /*增加间距*/
+    gap: 1.5em;
 }

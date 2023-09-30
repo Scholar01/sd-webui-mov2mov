@@ -1,31 +1,31 @@
-import sys
-
-import gradio as gr
-import modules.scripts as scripts
 import os
 import platform
 import shutil
 import subprocess as sp
+import sys
+
+import gradio as gr
+
 import modules
+import modules.scripts as scripts
 from modules import script_callbacks, shared, call_queue, sd_samplers, \
     ui_prompt_styles, sd_models
-from modules.images import image_data
 from modules.call_queue import wrap_gradio_gpu_call
+from modules.images import image_data
 from modules.shared import opts
 from modules.ui import ordered_ui_categories, create_sampler_and_steps_selection, switch_values_symbol, \
     create_override_settings_dropdown, detect_image_size_symbol, plaintext_to_html, paste_symbol, \
     clear_prompt_symbol, restore_progress_symbol
 from modules.ui_common import folder_symbol, update_generation_info, create_refresh_button
 from modules.ui_components import ResizeHandleRow, FormRow, ToolButton, FormGroup, InputAccordion
-
+from scripts import m2m_hook as patches
 from scripts import m2m_util
 from scripts import mov2mov
-from scripts import m2m_hook as patches
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
 from scripts.module_ui_extensions import scripts_mov2mov
+from scripts.movie_editor import MovieEditor
 
 id_part = "mov2mov"
-
 
 
 def save_video(video):
@@ -214,7 +214,8 @@ def create_refiner():
                                              choices=sd_models.checkpoint_tiles(), value='',
                                              tooltip="switch to another model in the middle of generation")
             create_refresh_button(refiner_checkpoint, sd_models.list_models,
-                                  lambda: {"choices": sd_models.checkpoint_tiles()}, f"{id_part}_checkpoint_refresh")
+                                  lambda: {"choices": sd_models.checkpoint_tiles()},
+                                  f"{id_part}_checkpoint_refresh")
 
             refiner_switch_at = gr.Slider(value=0.8, label="Switch at", minimum=0.01, maximum=1.0, step=0.01,
                                           elem_id=f"{id_part}_switch_at",
@@ -245,8 +246,9 @@ def on_ui_tabs():
 
                 for category in ordered_ui_categories():
                     if category == "sampler":
-                        steps, sampler_name = create_sampler_and_steps_selection(sd_samplers.visible_sampler_names(),
-                                                                                 id_part)
+                        steps, sampler_name = create_sampler_and_steps_selection(
+                            sd_samplers.visible_sampler_names(),
+                            id_part)
                     elif category == "dimensions":
                         with FormRow():
                             with gr.Column(elem_id=f"{id_part}_column_size", scale=4):
@@ -265,7 +267,8 @@ def on_ui_tabs():
                                                 detect_image_size_btn = ToolButton(value=detect_image_size_symbol,
                                                                                    elem_id=f"{id_part}_detect_image_size_btn")
                     elif category == "denoising":
-                        denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label='Denoising strength',
+                        denoising_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01,
+                                                       label='Denoising strength',
                                                        value=0.75, elem_id=f"{id_part}_denoising_strength")
 
                         noise_multiplier = gr.Slider(minimum=0,
@@ -278,10 +281,10 @@ def on_ui_tabs():
                             movie_frames = gr.Slider(minimum=10,
                                                      maximum=60,
                                                      step=1,
-                                                     label='Movie Frames',
+                                                     label='Movie FPS',
                                                      elem_id=f'{id_part}_movie_frames',
                                                      value=30)
-                            max_frames = gr.Number(label='Max Frames', value=-1, elem_id=f'{id_part}_max_frames')
+                            max_frames = gr.Number(label='Max FPS', value=-1, elem_id=f'{id_part}_max_frames')
 
 
                     elif category == "cfg":
@@ -289,7 +292,8 @@ def on_ui_tabs():
                             cfg_scale = gr.Slider(minimum=1.0, maximum=30.0, step=0.5, label='CFG Scale', value=7.0,
                                                   elem_id=f"{id_part}_cfg_scale")
                             image_cfg_scale = gr.Slider(minimum=0, maximum=3.0, step=0.05, label='Image CFG Scale',
-                                                        value=1.5, elem_id=f"{id_part}_image_cfg_scale", visible=False)
+                                                        value=1.5, elem_id=f"{id_part}_image_cfg_scale",
+                                                        visible=False)
 
                     elif category == "checkboxes":
 
@@ -306,6 +310,8 @@ def on_ui_tabs():
                             override_settings = create_override_settings_dropdown('mov2mov', row)
 
                     elif category == "scripts":
+                        editor = MovieEditor(id_part, init_mov, movie_frames)
+                        editor.render()
                         with FormGroup(elem_id=f"{id_part}_script_container"):
                             custom_inputs = scripts_mov2mov.setup_ui()
 
@@ -319,7 +325,8 @@ def on_ui_tabs():
                                  show_progress=False)
 
             # calc video size
-            detect_image_size_btn.click(fn=calc_video_w_h, inputs=[init_mov, width, height], outputs=[width, height])
+            detect_image_size_btn.click(fn=calc_video_w_h, inputs=[init_mov, width, height],
+                                        outputs=[width, height])
 
             mov2mov_args = dict(
                 fn=wrap_gradio_gpu_call(mov2mov.mov2mov, extra_outputs=[None, '', '']),
@@ -342,10 +349,16 @@ def on_ui_tabs():
 
                            # refiner
                            enable_refiner, refiner_checkpoint, refiner_switch_at,
-
+                           # mov2mov params
                            noise_multiplier,
                            movie_frames,
                            max_frames,
+                           # editor
+
+                           editor.gr_enable_movie_editor,
+                           editor.gr_df,
+                           editor.gr_eb_weight,
+                           editor.gr_eb_merge_weight,
 
                        ] + custom_inputs,
                 outputs=[
