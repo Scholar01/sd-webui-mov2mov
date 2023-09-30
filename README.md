@@ -3,6 +3,7 @@
 ## Mov2mov This is the Mov2mov plugin for Automatic1111/stable-diffusion-webui.
 
 ![img.png](images/2.jpg)
+![img1.png](images/1.png)
 
 
 
