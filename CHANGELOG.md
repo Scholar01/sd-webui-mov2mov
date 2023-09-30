@@ -1,3 +1,11 @@
+### 2023/9/30
+1. automatic video fps parsing
+2. Video editing features.
+   1. Customizable selection of keyframes or automatic generation of keyframes.
+   2. Backtrack keyframe tag.
+   3. automatically synthesize video based on keyframes via Ezsynth(https://github.com/Trentonom0r3/Ezsynth).
+   4. Currently, only the Windows system is supported. If your system does not support it, you can close this tab.
+
 ### 2023/9/24
 1. Move the tab behind img2img.
 2. Fix the issue of video synthesis failure on the Mac system.
