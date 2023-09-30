@@ -133,8 +133,20 @@ def process_keyframes(p, mov_file, fps, df, args):
             print(f'current progress: {i + 1}/{max_frames}')
             processed = process_images(p)
             gen_image = processed.images[0]
+
+            if gen_image.height != p.height or gen_image.width != p.width:
+                print(f'Warning: The generated image size is inconsistent with the original image size, '
+                      f'please check the configuration parameters')
+                gen_image = gen_image.resize((p.width, p.height))
+
             keyframe = Keyframe(row['frame'], np.asarray(gen_image), row['prompt'])
             generate_images.append(keyframe)
+
+    # 由于生成图片可能会产生像素偏差,这里再对齐一次宽高
+    images = [PIL.Image.fromarray(image) for image in images]
+    images = [image.resize(p.width, p.height) if image.width != p.width or image.height != p.height else image for image
+              in images]
+    images = [np.asarray(image) for image in images]
 
     return generate_images, images
 
@@ -190,7 +202,6 @@ def mov2mov(id_task: str,
             enable_movie_editor,
             df: pandas.DataFrame,
             eb_weight,
-
 
             *args):
     if not mov_file:
