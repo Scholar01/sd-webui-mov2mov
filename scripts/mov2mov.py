@@ -139,7 +139,7 @@ def process_keyframes(p, mov_file, fps, df, args):
     return generate_images, images
 
 
-def process_mov2mov_ebsynth(p, eb_generate, weight=4.0, merge_weight=0.4):
+def process_mov2mov_ebsynth(p, eb_generate, weight=4.0):
     from ebsynth._ebsynth import task as EbsyncthRun
     tasks = eb_generate.get_tasks(weight)
     tasks_len = len(tasks)
@@ -159,7 +159,7 @@ def process_mov2mov_ebsynth(p, eb_generate, weight=4.0, merge_weight=0.4):
         state.nextjob()
 
     print(f'Start merge frames')
-    result = eb_generate.merge_sequences(merge_weight)
+    result = eb_generate.merge_sequences()
     video = save_video(result, eb_generate.fps)
     return video
 
@@ -180,7 +180,7 @@ def mov2mov(id_task: str,
             override_settings_texts,
 
             # refiner
-            enable_refiner, refiner_checkpoint, refiner_switch_at,
+            # enable_refiner, refiner_checkpoint, refiner_switch_at,
             # mov2mov params
 
             noise_multiplier,
@@ -190,7 +190,7 @@ def mov2mov(id_task: str,
             enable_movie_editor,
             df: pandas.DataFrame,
             eb_weight,
-            eb_merge_weight,
+
 
             *args):
     if not mov_file:
@@ -236,14 +236,14 @@ def mov2mov(id_task: str,
 
     p.scripts = scripts_mov2mov
     p.script_args = args
-    print('script_args', args)
-
-    if not enable_refiner or refiner_checkpoint in (None, "", "None"):
-        p.refiner_checkpoint = None
-        p.refiner_switch_at = None
-    else:
-        p.refiner_checkpoint = refiner_checkpoint
-        p.refiner_switch_at = refiner_switch_at
+    # print('script_args', args)
+    #
+    # if not enable_refiner or refiner_checkpoint in (None, "", "None"):
+    #     p.refiner_checkpoint = None
+    #     p.refiner_switch_at = None
+    # else:
+    #     p.refiner_checkpoint = refiner_checkpoint
+    #     p.refiner_switch_at = refiner_switch_at
 
     if shared.cmd_opts.enable_console_prompts:
         print(f"\nmov2mov: {prompt}", file=shared.progress_print_out)
@@ -272,7 +272,7 @@ def mov2mov(id_task: str,
         eb_generate = EbsynthGenerate(keyframes, frames, movie_frames)
         print(f'\nStart generate frames')
 
-        generate_video = process_mov2mov_ebsynth(p, eb_generate, weight=eb_weight, merge_weight=eb_merge_weight)
+        generate_video = process_mov2mov_ebsynth(p, eb_generate, weight=eb_weight)
 
         processed = Processed(p, [], p.seed, "")
     p.close()

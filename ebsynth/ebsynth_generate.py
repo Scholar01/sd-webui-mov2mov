@@ -88,7 +88,7 @@ class EbsynthGenerate:
         else:
             raise ValueError(f'not found key frame num {key_frames_num}')
 
-    def merge_sequences(self, weight: float = 0.5):
+    def merge_sequences(self):
         # 存储合并后的结果
         merged_frames = []
         border = 1

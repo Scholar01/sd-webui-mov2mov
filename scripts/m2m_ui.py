@@ -303,7 +303,7 @@ def on_ui_tabs():
                     elif category == "accordions":
 
                         with gr.Row(elem_id=f"{id_part}_accordions", elem_classes="accordions"):
-                            enable_refiner, refiner_checkpoint, refiner_switch_at = create_refiner()
+                            scripts_mov2mov.setup_ui_for_section(category)
 
                     elif category == "override_settings":
                         with FormRow(elem_id=f"{id_part}_override_settings_row") as row:
@@ -348,7 +348,7 @@ def on_ui_tabs():
                            override_settings,
 
                            # refiner
-                           enable_refiner, refiner_checkpoint, refiner_switch_at,
+                           # enable_refiner, refiner_checkpoint, refiner_switch_at,
                            # mov2mov params
                            noise_multiplier,
                            movie_frames,
@@ -358,7 +358,6 @@ def on_ui_tabs():
                            editor.gr_enable_movie_editor,
                            editor.gr_df,
                            editor.gr_eb_weight,
-                           editor.gr_eb_merge_weight,
 
                        ] + custom_inputs,
                 outputs=[
