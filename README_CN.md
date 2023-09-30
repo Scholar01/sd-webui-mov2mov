@@ -15,6 +15,9 @@
   - 反推关键帧tag
   - 目前只有windows系统可以使用,如果您系统不支持,可以关闭该选项卡.
 
+
+另外,mov2mov与[bg-mask](https://github.com/Scholar01/sd-webui-bg-mask)插件一起工作会更好😃
+
 # 目录
 
 - [Mov2mov 适用于Automatic1111/stable-diffusion-webui 的 Mov2mov 插件。](#mov2mov-适用于automatic1111stable-diffusion-webui-的-mov2mov-插件)

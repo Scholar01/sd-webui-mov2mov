@@ -16,6 +16,8 @@ Features:
   - Backpropel keyframe tag
   - Currently only available for windows, if your system does not support, you can turn off this tab.
 
+Also, mov2mov will work better with the [bg-mask](https://github.com/Scholar01/sd-webui-bg-mask) plugin 😃
+
 # Table of Contents
 
 
