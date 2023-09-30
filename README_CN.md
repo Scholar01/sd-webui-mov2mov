@@ -3,6 +3,7 @@
 # Mov2mov 适用于Automatic1111/stable-diffusion-webui 的 Mov2mov 插件。
 
 ![img.png](images/2.jpg)
+![img1.png](images/1.png)
 
 
 功能：
