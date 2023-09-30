@@ -20,9 +20,10 @@ import modules.scripts as scripts
 
 from scripts.m2m_util import get_mov_all_images, images_to_video
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
-from scripts.module_ui_extensions import scripts_mov2mov
 import modules
 from ebsynth import EbsynthGenerate, Keyframe
+
+scripts_mov2mov = scripts.ScriptRunner()
 
 
 def check_data_frame(df: pandas.DataFrame):
