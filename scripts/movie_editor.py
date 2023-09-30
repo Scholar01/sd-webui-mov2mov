@@ -12,7 +12,6 @@ from scripts import m2m_util
 
 class MovieEditor:
     def __init__(self, id_part, gr_movie: gr.Video, gr_fps: gr.Slider):
-        self.gr_eb_merge_weight = None
         self.gr_eb_weight = None
         self.gr_df = None
         self.gr_keyframe = None
@@ -91,10 +90,7 @@ class MovieEditor:
 
             with gr.Row():
                 self.gr_eb_weight = gr.Slider(label="EbSynth weight", elem_id=f"{id_part}_video_eb_weight", step=0.1,
-                                              maximum=10, minimum=0, value=1)
-                self.gr_eb_merge_weight = gr.Slider(label="EbSynth merge weight",
-                                                    elem_id=f"{id_part}_video_eb_merge_weight", step=0.1,
-                                                    maximum=1, minimum=0, value=0.3)
+                                              maximum=10, minimum=0, value=4.0)
 
         self.gr_movie.change(fn=self.movie_change, inputs=[self.gr_movie],
                              outputs=[self.gr_frame_image, self.gr_frame_number, self.gr_fps],
@@ -232,10 +228,7 @@ class MovieEditor:
             return gr.Image.update(visible=False), gr.Slider.update(maximum=0, minimum=0), gr.Slider.update()
         fps = m2m_util.get_mov_fps(movie_path)
         self.frames = m2m_util.get_mov_all_images(movie_path, fps, True)
-        # 循环写到文件
-        # for i, frame in enumerate(self.frames):
-        #     frame = Image.fromarray(frame)
-        #     frame.save('C:\\Users\\131\\Desktop\\ebsynth\\SampleProject\\video\\' + str(i).rjust(4, '0') + '.png')
+       
 
         self.frame_count = len(self.frames)
         return (gr.Image.update(visible=True),
