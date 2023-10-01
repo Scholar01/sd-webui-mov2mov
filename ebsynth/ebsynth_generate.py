@@ -1,8 +1,9 @@
+import PIL
+
 import cv2
 import numpy as np
-from PIL.Image import Image
 from dataclasses import dataclass, field
-from toolz import groupby
+from PIL.Image import Image
 
 
 @dataclass
@@ -10,6 +11,22 @@ class Keyframe:
     num: int
     image: np.ndarray = field(repr=False)
     prompt: str = field(repr=False)
+    col: int = field(default=0)
+    row: int = field(default=0)
+
+
+@dataclass
+class KeyframeGuide:
+    """
+    用于生成keyframe的指导图
+    """
+    width: int
+    height: int
+    original_width: int
+    original_height: int
+    rows: int
+    cols: int
+    image: np.ndarray = field(repr=False)
 
 
 @dataclass
@@ -39,7 +56,21 @@ class EbsynthGenerate:
         self.frames = frames
         self.fps = fps
         self.sequences = []
-        self.setup_sequences()
+
+    def preprocess(self, resize_mode, width, height):
+        import modules
+        for keyframe in self.keyframes:
+            image = PIL.Image.fromarray(keyframe.image)
+            image = modules.images.resize_image(resize_mode, image, width, height)
+            assert image.width == width and image.height == height
+            keyframe.image = np.asarray(image)
+
+        for i, frame in enumerate(self.frames):
+            image = PIL.Image.fromarray(frame)
+            image = modules.images.resize_image(resize_mode, image, width, height)
+            assert image.width == width and image.height == height
+            self.frames[i] = np.asarray(image)
+        return self
 
     def setup_sequences(self):
         """
@@ -49,7 +80,9 @@ class EbsynthGenerate:
         all_frames = len(self.frames)
         left_frame = 1
         for i, keyframe in enumerate(self.keyframes):
-            right_frame = self.keyframes[i + 1].num if i + 1 < len(self.keyframes) else all_frames
+            right_frame = (
+                self.keyframes[i + 1].num if i + 1 < len(self.keyframes) else all_frames
+            )
             frames = {}
             for frame_num in range(left_frame, right_frame + 1):
                 frames[frame_num] = self.frames[frame_num - 1]
@@ -66,7 +99,9 @@ class EbsynthGenerate:
             style = sequence.keyframe.image
             for frame_num, frame in frames:
                 target = frame
-                task = EbSynthTask(style, source, target, frame_num, sequence.keyframe.num, weight)
+                task = EbSynthTask(
+                    style, source, target, frame_num, sequence.keyframe.num, weight
+                )
                 tasks.append(task)
         return tasks
 
@@ -86,43 +121,44 @@ class EbsynthGenerate:
                 sequence.generate_frames[frame_num] = generate_frames
                 break
         else:
-            raise ValueError(f'not found key frame num {key_frames_num}')
+            raise ValueError(f"not found key frame num {key_frames_num}")
 
     def merge_sequences(self):
-        # 存储合并后的结果
         merged_frames = []
         border = 1
         for i in range(len(self.sequences)):
             current_seq = self.sequences[i]
             next_seq = self.sequences[i + 1] if i + 1 < len(self.sequences) else None
 
-            # 如果存在下一个序列
             if next_seq:
-                # 获取两个序列的帧交集
                 common_frames_nums = set(current_seq.frames.keys()).intersection(
-                    set(range(next_seq.start + border, next_seq.end)) if i > 0 else set(
-                        range(next_seq.start, next_seq.end)))
+                    set(range(next_seq.start + border, next_seq.end))
+                    if i > 0
+                    else set(range(next_seq.start, next_seq.end))
+                )
 
                 for j, frame_num in enumerate(common_frames_nums):
-                    # 从两个序列中获取帧并合并
                     frame1 = current_seq.generate_frames[frame_num]
                     frame2 = next_seq.generate_frames[frame_num]
 
                     weight = float(j) / float(len(common_frames_nums))
-                    merged_frame = cv2.addWeighted(frame1, 1 - weight, frame2, weight, 0)
+                    merged_frame = cv2.addWeighted(
+                        frame1, 1 - weight, frame2, weight, 0
+                    )
                     merged_frames.append((frame_num, merged_frame))
-
-            # 如果没有下一个序列
             else:
-                # 添加与前一序列的差集帧到结果中
                 if i > 0:
                     prev_seq = self.sequences[i - 1]
-                    difference_frames_nums = set(current_seq.frames.keys()) - set(prev_seq.frames.keys())
+                    difference_frames_nums = set(current_seq.frames.keys()) - set(
+                        prev_seq.frames.keys()
+                    )
                 else:
                     difference_frames_nums = set(current_seq.frames.keys())
 
                 for frame_num in difference_frames_nums:
-                    merged_frames.append((frame_num, current_seq.generate_frames[frame_num]))
+                    merged_frames.append(
+                        (frame_num, current_seq.generate_frames[frame_num])
+                    )
 
         # group_merged_frames = groupby(lambda x: x[0], merged_frames)
         # merged_frames.clear()
@@ -141,3 +177,77 @@ class EbsynthGenerate:
             result.append(frame)
 
         return result
+
+
+class EbsynthSynthesizeGenerate(EbsynthGenerate):
+    """
+    keyframe的生成方式是拼接方式
+    """
+
+    def __init__(self, keyframes: list[Keyframe], frames: list[np.ndarray], fps: int):
+        super().__init__(keyframes, frames, fps)
+
+    def check_keyframes(self):
+        """
+        检查keyframe的宽高是否一致,并返回宽高
+        """
+
+        width = self.keyframes[0].image.shape[1]
+        height = self.keyframes[0].image.shape[0]
+
+        for i in range(len(self.keyframes) - 1):
+            if (
+                    self.keyframes[i].image.shape[0] != self.keyframes[i + 1].image.shape[0]
+                    or self.keyframes[i].image.shape[1]
+                    != self.keyframes[i + 1].image.shape[1]
+            ):
+                raise ValueError("keyframe's width and height must be same")
+
+        return width, height
+
+    def synthesize(self):
+        """
+        把keyframe拼接成一张大图
+        """
+
+        # 验证keyframe的宽高是否一致
+        w, h = self.check_keyframes()
+        keyframe_num = len(self.keyframes)
+        # 计算初步的行列数
+        base = int(np.ceil(np.sqrt(keyframe_num)))
+        rows = base
+        cols = base if base * (base - 1) < keyframe_num else base + 1
+
+        print(f'keyframe_num: {keyframe_num} , rows: {rows} , cols: {cols}')
+
+        canvas_h = rows * h
+        canvas_w = cols * w
+        canvas = np.zeros((canvas_h, canvas_w, 3), dtype=np.uint8)
+
+        # 在底图上放入每张图片
+        for idx, keyframe in enumerate(self.keyframes):
+            img = keyframe.image
+            row_idx = idx // cols
+            col_idx = idx % cols
+            canvas[row_idx * h:(row_idx + 1) * h, col_idx * w:(col_idx + 1) * w] = img
+            # 记录keyframe的行列
+            keyframe.row = row_idx
+            keyframe.col = col_idx
+
+        # 把图片缩放到原始图片大小
+        canvas = cv2.resize(canvas, (w, h), interpolation=cv2.INTER_AREA)
+
+        guide = KeyframeGuide(w, h, canvas_w, canvas_h, rows, cols, canvas)
+        return guide
+
+    @staticmethod
+    def split(guide: KeyframeGuide, frame: Keyframe):
+        """
+        把一张图片拆分成多张图片
+        """
+        w = guide.width // guide.cols
+        h = guide.height // guide.rows
+        x = frame.col * w
+        y = frame.row * h
+        img = guide.image[y:y + h, x:x + w]
+        return img

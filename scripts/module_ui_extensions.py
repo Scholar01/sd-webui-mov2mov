@@ -54,3 +54,20 @@ original_InputAccordion_init = patches.patch(
     field="__init__",
     replacement=InputAccordion_init,
 )
+
+
+def on_before_reload():
+    elem_ids.clear()
+
+    global original_IOComponent_init
+    if original_IOComponent_init:
+        patches.undo(__name__, obj=gradio.components.IOComponent, field="__init__")
+        original_IOComponent_init = None
+
+    global original_InputAccordion_init
+    if original_InputAccordion_init:
+        patches.undo(__name__, obj=ui_components.InputAccordion, field="__init__")
+        original_InputAccordion_init = None
+
+
+script_callbacks.on_before_reload(on_before_reload)

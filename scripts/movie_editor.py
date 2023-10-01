@@ -133,6 +133,15 @@ class MovieEditor:
                     value=4.0,
                 )
 
+            with gr.Row():
+                gr.Radio(
+                    label="Keyframe Model",
+                    choices=["step by step", "synthesize"],
+                    value="step by step",
+                    elem_id=f"{id_part}_video_keyframe_model",
+                    type="index",
+                )
+
         self.gr_movie.change(
             fn=self.movie_change,
             inputs=[self.gr_movie],

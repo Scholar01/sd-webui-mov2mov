@@ -1,27 +1,24 @@
-import os.path
-import platform
 import time
 
-import PIL.Image
-from tqdm import tqdm
 
-import modules
 
 import cv2
+import modules.scripts as scripts
 import numpy as np
+import os.path
 import pandas
+import platform
 from PIL import Image
 from modules import shared, processing
 from modules.generation_parameters_copypaste import create_override_settings_dict
 from modules.processing import StableDiffusionProcessingImg2Img, process_images, Processed
 from modules.shared import opts, state
 from modules.ui import plaintext_to_html
-import modules.scripts as scripts
+from tqdm import tqdm
 
-from scripts.m2m_util import get_mov_all_images, images_to_video
-from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
-import modules
 from ebsynth import EbsynthGenerate, Keyframe
+from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
+from scripts.m2m_util import get_mov_all_images, images_to_video
 
 scripts_mov2mov = scripts.ScriptRunner()
 
@@ -104,11 +101,6 @@ def process_keyframes(p, mov_file, fps, df, args):
         print('Failed to parse the video, please check')
         return
 
-    # 通过宽高,缩放模式,预处理图片
-    images = [PIL.Image.fromarray(image) for image in images]
-    images = [modules.images.resize_image(p.resize_mode, image, p.width, p.height) for image in images]
-    images = [np.asarray(image) for image in images]
-
     default_prompt = p.prompt
     max_frames = len(df)
 
@@ -135,19 +127,8 @@ def process_keyframes(p, mov_file, fps, df, args):
             processed = process_images(p)
             gen_image = processed.images[0]
 
-            if gen_image.height != p.height or gen_image.width != p.width:
-                print(f'Warning: The generated image size is inconsistent with the original image size, '
-                      f'please check the configuration parameters')
-                gen_image = gen_image.resize((p.width, p.height))
-
             keyframe = Keyframe(row['frame'], np.asarray(gen_image), row['prompt'])
             generate_images.append(keyframe)
-
-    # 由于生成图片可能会产生像素偏差,这里再对齐一次宽高
-    images = [PIL.Image.fromarray(image) for image in images]
-    images = [image.resize(p.width, p.height) if image.width != p.width or image.height != p.height else image for image
-              in images]
-    images = [np.asarray(image) for image in images]
 
     return generate_images, images
 
@@ -282,6 +263,8 @@ def mov2mov(id_task: str,
         print(f'Start generate keyframes')
         keyframes, frames = process_keyframes(p, mov_file, movie_frames, df, args)
         eb_generate = EbsynthGenerate(keyframes, frames, movie_frames)
+        eb_generate.preprocess(resize_mode, width, height).setup_sequences()
+
         print(f'\nStart generate frames')
 
         generate_video = process_mov2mov_ebsynth(p, eb_generate, weight=eb_weight)
