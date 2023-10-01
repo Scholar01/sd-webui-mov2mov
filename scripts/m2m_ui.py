@@ -46,7 +46,7 @@ from modules.ui_components import (
 from scripts import m2m_hook as patches
 from scripts import m2m_util
 from scripts import mov2mov
-from scripts.mov2mov import scripts_mov2mov
+from scripts.mov2mov import scripts_mov2mov, scripts_preprocess1, scripts_preprocess2
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
 from scripts.movie_editor import MovieEditor
 
@@ -120,7 +120,7 @@ class Toprow:
 
             with gr.Column(scale=1, elem_id=f"{id_part}_actions_column"):
                 with gr.Row(
-                    elem_id=f"{id_part}_generate_box", elem_classes="generate-box"
+                        elem_id=f"{id_part}_generate_box", elem_classes="generate-box"
                 ):
                     self.interrupt = gr.Button(
                         "Interrupt",
@@ -243,7 +243,7 @@ Requested path was: {f}
         generation_info = None
         with gr.Column():
             with gr.Row(
-                elem_id=f"image_buttons_{tabname}", elem_classes="image-buttons"
+                    elem_id=f"image_buttons_{tabname}", elem_classes="image-buttons"
             ):
                 open_folder_button = ToolButton(
                     folder_symbol,
@@ -312,7 +312,7 @@ Requested path was: {f}
 
 def create_refiner():
     with InputAccordion(
-        False, label="Refiner", elem_id=f"{id_part}_enable"
+            False, label="Refiner", elem_id=f"{id_part}_enable"
     ) as enable_refiner:
         with gr.Row():
             refiner_checkpoint = gr.Dropdown(
@@ -343,15 +343,16 @@ def create_refiner():
 
 def on_ui_tabs():
     scripts_mov2mov.initialize_scripts(is_img2img=True)
-
+    scripts_preprocess1.initialize_scripts(is_img2img=True)
+    scripts_preprocess2.initialize_scripts(is_img2img=True)
     # with gr.Blocks(analytics_enabled=False) as mov2mov_interface:
     with gr.TabItem(
-        "mov2mov", id=f"tab_{id_part}", elem_id=f"tab_{id_part}"
+            "mov2mov", id=f"tab_{id_part}", elem_id=f"tab_{id_part}"
     ) as mov2mov_interface:
         toprow = Toprow(is_img2img=False, id_part=id_part)
         dummy_component = gr.Label(visible=False)
         with gr.Tab(
-            "Generation", id=f"{id_part}_generation"
+                "Generation", id=f"{id_part}_generation"
         ) as mov2mov_generation_tab, ResizeHandleRow(equal_height=False):
             with gr.Column(variant="compact", elem_id="mov2mov_settings"):
                 with gr.Tabs(elem_id=f"mode_{id_part}"):
@@ -387,13 +388,13 @@ def on_ui_tabs():
                             with gr.Column(elem_id=f"{id_part}_column_size", scale=4):
                                 with gr.Tabs():
                                     with gr.Tab(
-                                        label="Resize to",
-                                        elem_id=f"{id_part}_tab_resize_to",
+                                            label="Resize to",
+                                            elem_id=f"{id_part}_tab_resize_to",
                                     ) as tab_scale_to:
                                         with FormRow():
                                             with gr.Column(
-                                                elem_id=f"{id_part}_column_size",
-                                                scale=4,
+                                                    elem_id=f"{id_part}_column_size",
+                                                    scale=4,
                                             ):
                                                 width = gr.Slider(
                                                     minimum=64,
@@ -412,9 +413,9 @@ def on_ui_tabs():
                                                     elem_id=f"{id_part}_height",
                                                 )
                                             with gr.Column(
-                                                elem_id=f"{id_part}_dimensions_row",
-                                                scale=1,
-                                                elem_classes="dimensions-tools",
+                                                    elem_id=f"{id_part}_dimensions_row",
+                                                    scale=1,
+                                                    elem_classes="dimensions-tools",
                                             ):
                                                 res_switch_btn = ToolButton(
                                                     value=switch_values_symbol,
@@ -483,7 +484,7 @@ def on_ui_tabs():
 
                     elif category == "accordions":
                         with gr.Row(
-                            elem_id=f"{id_part}_accordions", elem_classes="accordions"
+                                elem_id=f"{id_part}_accordions", elem_classes="accordions"
                         ):
                             scripts_mov2mov.setup_ui_for_section(category)
 
@@ -501,6 +502,20 @@ def on_ui_tabs():
 
                     if category not in {"accordions"}:
                         scripts_mov2mov.setup_ui_for_section(category)
+
+            with gr.Row(visible=False):
+                preprocess1_len = gr.Number(
+                    label="Preprocess1",
+                    value=len(editor.preprocess1_inputs),
+                    elem_id=f"{id_part}_preprocess1_len",
+                    visible=False,
+                )
+                preprocess2_len = gr.Number(
+                    label="Preprocess2",
+                    value=len(editor.preprocess2_inputs),
+                    elem_id=f"{id_part}_preprocess2_len",
+                    visible=False,
+                )
 
             (
                 mov2mov_gallery,
@@ -525,36 +540,48 @@ def on_ui_tabs():
                 outputs=[width, height],
             )
 
+            custom_inputs = [
+                *editor.preprocess1_inputs,
+                *editor.preprocess2_inputs,
+                *custom_inputs,
+            ]
+            print(custom_inputs)
+
             mov2mov_args = dict(
                 fn=wrap_gradio_gpu_call(mov2mov.mov2mov, extra_outputs=[None, "", ""]),
                 _js="submit_mov2mov",
                 inputs=[
-                    dummy_component,
-                    toprow.prompt,
-                    toprow.negative_prompt,
-                    toprow.ui_styles.dropdown,
-                    init_mov,
-                    steps,
-                    sampler_name,
-                    cfg_scale,
-                    image_cfg_scale,
-                    denoising_strength,
-                    height,
-                    width,
-                    resize_mode,
-                    override_settings,
-                    # refiner
-                    # enable_refiner, refiner_checkpoint, refiner_switch_at,
-                    # mov2mov params
-                    noise_multiplier,
-                    movie_frames,
-                    max_frames,
-                    # editor
-                    editor.gr_enable_movie_editor,
-                    editor.gr_df,
-                    editor.gr_eb_weight,
-                ]
-                + custom_inputs,
+                           dummy_component,
+                           toprow.prompt,
+                           toprow.negative_prompt,
+                           toprow.ui_styles.dropdown,
+                           init_mov,
+                           steps,
+                           sampler_name,
+                           cfg_scale,
+                           image_cfg_scale,
+                           denoising_strength,
+                           height,
+                           width,
+                           resize_mode,
+                           override_settings,
+                           # refiner
+                           # enable_refiner, refiner_checkpoint, refiner_switch_at,
+                           # mov2mov params
+                           noise_multiplier,
+                           movie_frames,
+                           max_frames,
+                           # editor
+                           editor.gr_enable_movie_editor,
+                           editor.gr_df,
+                           editor.gr_eb_weight,
+                           editor.gr_keyframe_mode,
+
+                           preprocess1_len,
+                           preprocess2_len,
+                       ]
+                       + custom_inputs,
+
                 outputs=[
                     result_video,
                     generation_info,

@@ -1,7 +1,5 @@
 import time
 
-
-
 import cv2
 import modules.scripts as scripts
 import numpy as np
@@ -16,11 +14,13 @@ from modules.shared import opts, state
 from modules.ui import plaintext_to_html
 from tqdm import tqdm
 
-from ebsynth import EbsynthGenerate, Keyframe
+from ebsynth import EbsynthGenerate, Keyframe, EbsynthSynthesizeGenerate
 from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
 from scripts.m2m_util import get_mov_all_images, images_to_video
 
 scripts_mov2mov = scripts.ScriptRunner()
+scripts_preprocess1 = scripts.ScriptRunner()
+scripts_preprocess2 = scripts.ScriptRunner()
 
 
 def check_data_frame(df: pandas.DataFrame):
@@ -94,7 +94,7 @@ def process_mov2mov(p, mov_file, movie_frames, max_frames, resize_mode, w, h, ar
     return video
 
 
-def process_keyframes(p, mov_file, fps, df, args):
+def process_keyframes_step(p, mov_file, fps, df, args):
     processing.fix_seed(p)
     images = get_mov_all_images(mov_file, fps)
     if not images:
@@ -131,6 +131,20 @@ def process_keyframes(p, mov_file, fps, df, args):
             generate_images.append(keyframe)
 
     return generate_images, images
+
+
+def process_keyframes_synthesize(p, mov_file, fps, df, args):
+    processing.fix_seed(p)
+    images = get_mov_all_images(mov_file, fps)
+    if not images:
+        print('Failed to parse the video, please check')
+        return
+
+    keyframes = [Keyframe(row['frame'], images[row['frame'] - 1], row['prompt']) for i, row in df.iterrows()]
+    eb_generate = EbsynthSynthesizeGenerate(keyframes, images, fps)
+    eb_generate.preprocess(p.resize_mode, p.width, p.height)
+
+    guide = eb_generate.synthesize()
 
 
 def process_mov2mov_ebsynth(p, eb_generate, weight=4.0):
@@ -184,8 +198,20 @@ def mov2mov(id_task: str,
             enable_movie_editor,
             df: pandas.DataFrame,
             eb_weight,
-
+            keyframe_mode,
+            preprocess1_inputs_len,
+            preprocess2_inputs_len,
             *args):
+    args = list(args)
+    preprocess1_inputs_len=int(preprocess1_inputs_len)
+    preprocess2_inputs_len=int(preprocess2_inputs_len)
+    preprocess1_inputs = args[:preprocess1_inputs_len]
+    preprocess2_inputs = args[preprocess1_inputs_len:preprocess1_inputs_len + preprocess2_inputs_len]
+    args = args[preprocess1_inputs_len + preprocess2_inputs_len:]
+    print(f'{preprocess1_inputs}')
+    print(f'{preprocess2_inputs}')
+    print(f'{args}')
+
     if not mov_file:
         raise Exception('Error！ Please add a video file!')
 
@@ -261,12 +287,17 @@ def mov2mov(id_task: str,
 
         # generate keyframes
         print(f'Start generate keyframes')
-        keyframes, frames = process_keyframes(p, mov_file, movie_frames, df, args)
-        eb_generate = EbsynthGenerate(keyframes, frames, movie_frames)
-        eb_generate.preprocess(resize_mode, width, height).setup_sequences()
+        if keyframe_mode == 0:
+            keyframes, frames = process_keyframes_step(p, mov_file, movie_frames, df, args)
+            eb_generate = EbsynthGenerate(keyframes, frames, movie_frames)
+            eb_generate.preprocess(resize_mode, width, height).setup_sequences()
+        else:
+            keyframes, frames = process_keyframes_synthesize(p, mov_file, movie_frames, df, args)
+            eb_generate = EbsynthGenerate(keyframes, frames, movie_frames)
+            eb_generate.preprocess(resize_mode, width, height).setup_sequences()
+            eb_generate.setup_sequences_from_keyframes()
 
         print(f'\nStart generate frames')
-
         generate_video = process_mov2mov_ebsynth(p, eb_generate, weight=eb_weight)
 
         processed = Processed(p, [], p.seed, "")

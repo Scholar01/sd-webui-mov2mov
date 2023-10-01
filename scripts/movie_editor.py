@@ -6,12 +6,16 @@ from PIL import Image
 from tqdm import tqdm
 
 from modules import shared, deepbooru
-from modules.ui_components import InputAccordion, ToolButton
+from modules.ui_components import InputAccordion, ToolButton, FormRow, FormGroup
 from scripts import m2m_util
+from scripts.mov2mov import scripts_preprocess1, scripts_preprocess2
 
 
 class MovieEditor:
     def __init__(self, id_part, gr_movie: gr.Video, gr_fps: gr.Slider):
+        self.preprocess2_inputs = []
+        self.preprocess1_inputs = []
+        self.gr_keyframe_mode = None
         self.gr_eb_weight = None
         self.gr_df = None
         self.gr_keyframe = None
@@ -30,7 +34,7 @@ class MovieEditor:
     def render(self):
         id_part = self.id_part
         with InputAccordion(
-            True, label="Movie Editor", elem_id=f"{id_part}_editor_enable"
+                True, label="Movie Editor", elem_id=f"{id_part}_editor_enable"
         ) as enable_movie_editor:
             self.gr_enable_movie_editor = enable_movie_editor
             gr.HTML(
@@ -134,13 +138,29 @@ class MovieEditor:
                 )
 
             with gr.Row():
-                gr.Radio(
+                self.gr_keyframe_mode = gr.Radio(
                     label="Keyframe Model",
                     choices=["step by step", "synthesize"],
                     value="step by step",
                     elem_id=f"{id_part}_video_keyframe_model",
                     type="index",
                 )
+
+            with gr.Row(visible=False) as synthesize_tab:
+                with gr.Tab('Preprocess Step 1: synthesize'):
+                    with FormGroup(elem_id=f"{id_part}_script_preprocess_step1_container"):
+                        self.preprocess1_inputs = scripts_preprocess1.setup_ui()
+
+                with gr.Tab('Preprocess Step 2: upscale'):
+                    with FormGroup(elem_id=f"{id_part}_script_preprocess_step2_container"):
+                        self.preprocess2_inputs = scripts_preprocess2.setup_ui()
+
+        self.gr_keyframe_mode.change(
+            fn=lambda value: synthesize_tab.update(visible=value == 1),
+            inputs=[self.gr_keyframe_mode],
+            outputs=[synthesize_tab],
+            show_progress=True,
+        )
 
         self.gr_movie.change(
             fn=self.movie_change,
@@ -290,7 +310,7 @@ class MovieEditor:
         return data_frame
 
     def key_frame_interval_generate_click(
-        self, data_frame: pandas.DataFrame, key_frame_interval: int
+            self, data_frame: pandas.DataFrame, key_frame_interval: int
     ):
         if key_frame_interval < 1:
             return data_frame
