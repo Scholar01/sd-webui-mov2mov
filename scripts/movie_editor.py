@@ -8,7 +8,7 @@ from tqdm import tqdm
 from modules import shared, deepbooru
 from modules.ui_components import InputAccordion, ToolButton, FormRow, FormGroup
 from scripts import m2m_util
-from scripts.mov2mov import scripts_preprocess1, scripts_preprocess2
+from scripts.mov2mov import scripts_preprocess1, scripts_preprocess2, scripts_mov2mov
 
 
 class MovieEditor:
@@ -149,10 +149,12 @@ class MovieEditor:
             with gr.Row(visible=False) as synthesize_tab:
                 with gr.Tab('Preprocess Step 1: synthesize'):
                     with FormGroup(elem_id=f"{id_part}_script_preprocess_step1_container"):
+                        scripts_preprocess1.setup_ui_for_section('accordions')
                         self.preprocess1_inputs = scripts_preprocess1.setup_ui()
 
                 with gr.Tab('Preprocess Step 2: upscale'):
                     with FormGroup(elem_id=f"{id_part}_script_preprocess_step2_container"):
+                        scripts_preprocess2.setup_ui_for_section('accordions')
                         self.preprocess2_inputs = scripts_preprocess2.setup_ui()
 
         self.gr_keyframe_mode.change(

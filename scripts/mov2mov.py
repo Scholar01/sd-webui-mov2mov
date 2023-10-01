@@ -133,7 +133,7 @@ def process_keyframes_step(p, mov_file, fps, df, args):
     return generate_images, images
 
 
-def process_keyframes_synthesize(p, mov_file, fps, df, args):
+def process_keyframes_synthesize(p, mov_file, fps, df, preprocess_args, args):
     processing.fix_seed(p)
     images = get_mov_all_images(mov_file, fps)
     if not images:
@@ -145,6 +145,32 @@ def process_keyframes_synthesize(p, mov_file, fps, df, args):
     eb_generate.preprocess(p.resize_mode, p.width, p.height)
 
     guide = eb_generate.synthesize()
+
+    # patch process
+    img = Image.fromarray(cv2.cvtColor(guide.image, cv2.COLOR_BGR2RGB), 'RGB')
+    p.script = scripts_preprocess1
+    p.script_args = preprocess_args
+    p.init_images = [img]
+
+
+    # run preprocess1
+    state.job_count = 1  # * p.n_iter
+    if state.skipped:
+        state.skipped = False
+
+    if state.interrupted:
+        return eb_generate
+
+    proc = scripts_preprocess1.run(p, *preprocess_args)
+    if proc is None:
+        processed = process_images(p)
+        gen_image = processed.images[0]
+
+        gen_image = np.asarray(gen_image)
+
+        cv2.imwrite('/Users/db/Downloads/preprocess1.png', cv2.cvtColor(gen_image, cv2.COLOR_RGB2BGR))
+
+    return eb_generate
 
 
 def process_mov2mov_ebsynth(p, eb_generate, weight=4.0):
@@ -203,15 +229,17 @@ def mov2mov(id_task: str,
             preprocess2_inputs_len,
             *args):
     args = list(args)
-    preprocess1_inputs_len=int(preprocess1_inputs_len)
-    preprocess2_inputs_len=int(preprocess2_inputs_len)
+    preprocess1_inputs_len = int(preprocess1_inputs_len)
+    preprocess2_inputs_len = int(preprocess2_inputs_len)
     preprocess1_inputs = args[:preprocess1_inputs_len]
     preprocess2_inputs = args[preprocess1_inputs_len:preprocess1_inputs_len + preprocess2_inputs_len]
     args = args[preprocess1_inputs_len + preprocess2_inputs_len:]
-    print(f'{preprocess1_inputs}')
-    print(f'{preprocess2_inputs}')
-    print(f'{args}')
-
+    # fix seed
+    for script in scripts_mov2mov.scripts:
+        if script.section == 'seed':
+            for i in range(script.args_from, script.args_to):
+                preprocess1_inputs.insert(i, args[i])
+                preprocess2_inputs.insert(i, args[i])
     if not mov_file:
         raise Exception('Error！ Please add a video file!')
 
@@ -255,14 +283,6 @@ def mov2mov(id_task: str,
 
     p.scripts = scripts_mov2mov
     p.script_args = args
-    # print('script_args', args)
-    #
-    # if not enable_refiner or refiner_checkpoint in (None, "", "None"):
-    #     p.refiner_checkpoint = None
-    #     p.refiner_switch_at = None
-    # else:
-    #     p.refiner_checkpoint = refiner_checkpoint
-    #     p.refiner_switch_at = refiner_switch_at
 
     if shared.cmd_opts.enable_console_prompts:
         print(f"\nmov2mov: {prompt}", file=shared.progress_print_out)
@@ -275,8 +295,9 @@ def mov2mov(id_task: str,
         processed = Processed(p, [], p.seed, "")
     else:
         # editor
-        if platform.system() != 'Windows':
-            raise Exception('The editor is currently only supported on Windows')
+        # todo : dev editor
+        # if platform.system() != 'Windows':
+        #     raise Exception('The editor is currently only supported on Windows')
 
         # check df no frame
         if not check_data_frame(df):
@@ -292,10 +313,7 @@ def mov2mov(id_task: str,
             eb_generate = EbsynthGenerate(keyframes, frames, movie_frames)
             eb_generate.preprocess(resize_mode, width, height).setup_sequences()
         else:
-            keyframes, frames = process_keyframes_synthesize(p, mov_file, movie_frames, df, args)
-            eb_generate = EbsynthGenerate(keyframes, frames, movie_frames)
-            eb_generate.preprocess(resize_mode, width, height).setup_sequences()
-            eb_generate.setup_sequences_from_keyframes()
+            process_keyframes_synthesize(p, mov_file, movie_frames, df, preprocess1_inputs, args)
 
         print(f'\nStart generate frames')
         generate_video = process_mov2mov_ebsynth(p, eb_generate, weight=eb_weight)
