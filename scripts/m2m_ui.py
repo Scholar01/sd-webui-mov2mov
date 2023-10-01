@@ -545,7 +545,6 @@ def on_ui_tabs():
                 *editor.preprocess2_inputs,
                 *custom_inputs,
             ]
-            print(custom_inputs)
 
             mov2mov_args = dict(
                 fn=wrap_gradio_gpu_call(mov2mov.mov2mov, extra_outputs=[None, "", ""]),
