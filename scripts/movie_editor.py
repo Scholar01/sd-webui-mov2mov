@@ -6,9 +6,9 @@ from PIL import Image
 from tqdm import tqdm
 
 from modules import shared, deepbooru
-from modules.ui_components import InputAccordion, ToolButton, FormRow, FormGroup
-from scripts import m2m_util
-from scripts.mov2mov import scripts_preprocess1, scripts_preprocess2, scripts_mov2mov
+from modules.ui_components import InputAccordion, ToolButton, FormGroup
+from mov2mov import util
+from mov2mov.mov2mov import scripts_preprocess1, scripts_preprocess2, scripts_mov2mov
 
 
 class MovieEditor:
@@ -333,8 +333,8 @@ class MovieEditor:
                 gr.Slider.update(maximum=0, minimum=0),
                 gr.Slider.update(),
             )
-        fps = m2m_util.get_mov_fps(movie_path)
-        self.frames = m2m_util.get_mov_all_images(movie_path, fps, True)
+        fps = util.get_mov_fps(movie_path)
+        self.frames = util.get_mov_all_images(movie_path, fps, True)
 
         self.frame_count = len(self.frames)
         return (

@@ -1,6 +1,6 @@
 import gradio
 from modules import script_callbacks, ui_components
-from scripts import m2m_hook as patches
+from mov2mov import patches
 
 
 elem_ids = []

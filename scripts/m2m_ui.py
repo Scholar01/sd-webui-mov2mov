@@ -1,4 +1,3 @@
-import importlib
 import os
 import platform
 import shutil
@@ -8,7 +7,6 @@ import sys
 import gradio as gr
 
 import modules
-import modules.scripts as scripts
 from modules import (
     script_callbacks,
     shared,
@@ -43,12 +41,12 @@ from modules.ui_components import (
     FormGroup,
     InputAccordion,
 )
-from scripts import m2m_hook as patches
-from scripts import m2m_util
-from scripts import mov2mov
-from scripts.mov2mov import scripts_mov2mov, scripts_preprocess1, scripts_preprocess2
-from scripts.m2m_config import mov2mov_outpath_samples, mov2mov_output_dir
 from scripts.movie_editor import MovieEditor
+
+
+from mov2mov.mov2mov import scripts_mov2mov, scripts_preprocess1, scripts_preprocess2, mov2mov
+from mov2mov.config import mov2mov_outpath_samples, mov2mov_output_dir
+from mov2mov import patches, util
 
 id_part = "mov2mov"
 
@@ -547,7 +545,7 @@ def on_ui_tabs():
             ]
 
             mov2mov_args = dict(
-                fn=wrap_gradio_gpu_call(mov2mov.mov2mov, extra_outputs=[None, "", ""]),
+                fn=wrap_gradio_gpu_call(mov2mov, extra_outputs=[None, "", ""]),
                 _js="submit_mov2mov",
                 inputs=[
                            dummy_component,
@@ -599,7 +597,7 @@ def calc_video_w_h(video, width, height):
     if not video:
         return width, height
 
-    return m2m_util.calc_video_w_h(video)
+    return util.calc_video_w_h(video)
 
 
 def on_ui_settings():

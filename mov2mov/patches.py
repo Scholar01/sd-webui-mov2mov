@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+
 def patch(key, obj, field, replacement):
     """Replaces a function in a module or a class.
 
