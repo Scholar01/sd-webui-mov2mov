@@ -12,11 +12,12 @@ def fix_elem_id(component, **kwargs):
     elem_id = kwargs["elem_id"]
     if not elem_id:
         return None
+
     if elem_id not in elem_ids:
         elem_ids.append(elem_id)
     else:
-        elem_id = elem_id + "_" + str(elem_ids.count(elem_id))
         elem_ids.append(elem_id)
+        elem_id = elem_id + "_" + str(elem_ids.count(elem_id))
 
     return elem_id
 
