@@ -364,7 +364,7 @@ class MovieEditor:
                 maximum=0, minimum=0
             )
 
-        self.frames = m2m_util.get_mov_all_images(movie_path, fps, True)
+        self.frames = util.get_mov_all_images(movie_path, fps, True)
         self.frame_count = len(self.frames)
         return (
             gr.Image.update(visible=True),

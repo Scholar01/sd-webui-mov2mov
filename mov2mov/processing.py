@@ -9,6 +9,7 @@ from modules.processing import StableDiffusionProcessingImg2Img
 from PIL.Image import Image
 
 from .interface import Keyframe
+from .util import check_data_frame
 
 
 @dataclass(repr=False)
@@ -50,7 +51,7 @@ class StableDiffusionProcessingMov2Mov(StableDiffusionProcessingImg2Img):
                     preprocess1_inputs.insert(i, args[i])
                     preprocess2_inputs.insert(i, args[i])
 
-        args= tuple(args)
+        args = tuple(args)
         preprocess1_inputs = tuple(preprocess1_inputs)
         preprocess2_inputs = tuple(preprocess2_inputs)
 
@@ -83,14 +84,16 @@ class StableDiffusionProcessingMov2Mov(StableDiffusionProcessingImg2Img):
 
         """
 
-        if self.beta and self.data_frames:
-            self.keyframes.clear()
-            default_prompt = self.prompt
-            for i, row in self.data_frames.iterrows():
-                prompt = default_prompt + row['prompt']
-                frame = self.frames[row['frame'] - 1]
-                keyframe = Keyframe(row['frame'], frame, prompt)
-                self.keyframes.append(keyframe)
+        if not self.beta:
+            raise ValueError('not enable beta mode')
 
+        if not check_data_frame(self.data_frames):
+            raise Exception('Please add a frame')
 
-
+        self.keyframes.clear()
+        default_prompt = self.prompt
+        for i, row in self.data_frames.iterrows():
+            prompt = default_prompt + row['prompt']
+            frame = self.frames[row['frame'] - 1]
+            keyframe = Keyframe(row['frame'], frame, prompt)
+            self.keyframes.append(keyframe)

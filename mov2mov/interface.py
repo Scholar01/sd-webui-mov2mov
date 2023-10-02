@@ -31,3 +31,13 @@ class Sequence:
     frames: dict[int, np.ndarray] = field(default_factory=dict, repr=False)
     # 序列生成的所有帧
     generate_frames: dict[int, np.ndarray] = field(default_factory=dict, repr=False)
+
+
+@dataclass
+class EbSynthTask:
+    style: np.ndarray = field(repr=False)
+    source: np.ndarray = field(repr=False)
+    target: np.ndarray = field(repr=False)
+    frame_num: int
+    key_frame_num: int
+    weight: float = field(default=1.0, repr=False)

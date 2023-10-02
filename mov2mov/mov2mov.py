@@ -39,6 +39,16 @@ def save_video(images, fps, extension='.mp4'):
     return video
 
 
+def run_image(p: StableDiffusionProcessingMov2Mov, image: PIL.Image.Image, runner: scripts.ScriptRunner, *script_args):
+    p.init_images = [image]
+    proc = runner.run(p, *script_args)
+    if proc is None:
+        processed = process_images(p)
+        # 只取第一张
+        gen_image = processed.images[0]
+        return gen_image
+
+
 def process_mov2mov(p: StableDiffusionProcessingMov2Mov):
     """
     默认处理程序
@@ -58,18 +68,13 @@ def process_mov2mov(p: StableDiffusionProcessingMov2Mov):
             break
 
         img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 'RGB')
-
-        p.init_images = [img]
-        proc = scripts_mov2mov.run(p, *p.scripts_custom_args)
-        if proc is None:
-            print(f'current progress: {i + 1}/{max_frames}')
-            processed = process_images(p)
-            # 只取第一张
-            gen_image = processed.images[0]
+        gen_image = run_image(p, img, p.scripts, *p.script_args)
+        if gen_image:
             generate_images.append(gen_image)
 
     video = save_video(generate_images, p.fps)
     return video
+
 
 def process_step_by_step(p: StableDiffusionProcessingMov2Mov):
     """
@@ -77,9 +82,44 @@ def process_step_by_step(p: StableDiffusionProcessingMov2Mov):
 
     """
 
-    print(f'Start generate keyframes')
+    print(f'\nStart generate keyframes')
 
+    sequences = generate_sequences(p.frames, p.keyframes)
+    state.job_count = len(sequences)
+    for i, sequence in enumerate(sequences):
+        keyframe = sequence.keyframe
+        state.job = f"{i + 1} out of {len(sequences)}"
+        if state.skipped:
+            state.skipped = False
 
+        if state.interrupted:
+            break
+        p.prompt = keyframe.prompt
+        img = Image.fromarray(cv2.cvtColor(keyframe.image, cv2.COLOR_BGR2RGB), 'RGB')
+        gen_image = run_image(p, img, p.scripts, *p.script_args)
+        if gen_image:
+            sequence.keyframe.image = gen_image
+
+    from .ebsynth.ebsynth import task as ebsync_run
+    print(f'\nStart generate frames for ebsynth')
+
+    tasks = get_tasks(sequences, p.ebsynth_weight)
+    state.job_count = len(tasks)
+    for i, task in enumerate(tasks):
+        state.job = f"{i + 1} out of {len(tasks)}"
+        if state.skipped:
+            state.skipped = False
+
+        if state.interrupted:
+            break
+
+        result = ebsync_run(task.style, [(task.source, task.target, task.weight)])
+        append_sequences_generate_frame(sequences, task.key_frame_num, task.frame_num, result)
+        state.nextjob()
+
+    frames = merge_sequences(sequences)
+    video = save_video(frames, p.fps)
+    return video
 
 
 def mov2mov(id_task: str,
@@ -174,6 +214,9 @@ def mov2mov(id_task: str,
 
     if not enable_movie_editor:
         video = process_mov2mov(p)
+
+    elif enable_movie_editor and keyframe_mode == 0:
+        video = process_step_by_step(p)
 
     processed = Processed(p, [], p.seed, "")
     p.close()
