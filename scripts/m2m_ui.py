@@ -450,11 +450,11 @@ def on_ui_tabs():
                                 elem_id=f"{id_part}_movie_frames",
                                 value=30,
                             )
-                            max_frames = gr.Number(
-                                label="Max FPS",
-                                value=-1,
-                                elem_id=f"{id_part}_max_frames",
-                            )
+                        #     max_frames = gr.Number(
+                        #         label="Max FPS",
+                        #         value=-1,
+                        #         elem_id=f"{id_part}_max_frames",
+                        #     )
 
                     elif category == "cfg":
                         with gr.Row():
@@ -567,7 +567,6 @@ def on_ui_tabs():
                            # mov2mov params
                            noise_multiplier,
                            movie_frames,
-                           max_frames,
                            # editor
                            editor.gr_enable_movie_editor,
                            editor.gr_df,

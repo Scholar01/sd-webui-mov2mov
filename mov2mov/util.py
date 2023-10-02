@@ -3,6 +3,9 @@ import platform
 import cv2
 import numpy
 import imageio
+import pandas
+
+
 
 
 def calc_video_w_h(video_path):
@@ -43,6 +46,29 @@ def get_mov_fps(file):
     fps = cap.get(cv2.CAP_PROP_FPS)
     cap.release()
     return fps
+
+
+def get_mov_and_fps(file, rgb=False):
+    if file is None:
+        return None
+    cap = cv2.VideoCapture(file)
+
+    if not cap.isOpened():
+        return None
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    image_list = []
+    while (True):
+        flag, frame = cap.read()
+        if not flag:
+            break
+        else:
+            if rgb:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            image_list.append(frame)
+
+    cap.release()
+    return image_list, fps
 
 
 def get_mov_all_images(file, frames, rgb=False):
@@ -114,3 +140,15 @@ def images_to_video_mac(images, frames, out_path):
         video.write(img)
     video.release()
     return out_path
+
+
+def check_data_frame(df: pandas.DataFrame):
+    # 删除df的frame值为0的行
+    df = df[df['frame'] > 0]
+
+    # 判断df是否为空
+    if len(df) <= 0:
+        return False
+
+    return True
+
