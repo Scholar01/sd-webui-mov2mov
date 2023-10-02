@@ -91,3 +91,6 @@ class StableDiffusionProcessingMov2Mov(StableDiffusionProcessingImg2Img):
                 frame = self.frames[row['frame'] - 1]
                 keyframe = Keyframe(row['frame'], frame, prompt)
                 self.keyframes.append(keyframe)
+
+
+

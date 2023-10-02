@@ -16,3 +16,18 @@ class Keyframe:
     # 用于多帧渲染存储自身位置
     col: int = field(default=0)
     row: int = field(default=0)
+
+
+@dataclass
+class Sequence:
+    """
+    序列
+    """
+
+    start: int
+    keyframe: Keyframe
+    end: int
+    # 当前序列的所有帧
+    frames: dict[int, np.ndarray] = field(default_factory=dict, repr=False)
+    # 序列生成的所有帧
+    generate_frames: dict[int, np.ndarray] = field(default_factory=dict, repr=False)

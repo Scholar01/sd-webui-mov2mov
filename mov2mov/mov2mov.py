@@ -15,6 +15,8 @@ from modules.ui import plaintext_to_html
 from .processing import StableDiffusionProcessingMov2Mov
 from .config import mov2mov_outpath_samples, mov2mov_output_dir
 from .util import get_mov_all_images, images_to_video
+from .ebsynth_util import *
+from .interface import *
 
 scripts_mov2mov = scripts.ScriptRunner()
 scripts_preprocess1 = scripts.ScriptRunner()
@@ -69,6 +71,16 @@ def process_mov2mov(p: StableDiffusionProcessingMov2Mov):
     video = save_video(generate_images, p.fps)
     return video
 
+def process_step_by_step(p: StableDiffusionProcessingMov2Mov):
+    """
+    根据关键帧逐逐帧生成
+
+    """
+
+    print(f'Start generate keyframes')
+
+
+
 
 def mov2mov(id_task: str,
             prompt,
@@ -108,6 +120,9 @@ def mov2mov(id_task: str,
     inpainting_mask_invert = 0
 
     frames = get_mov_all_images(mov_file, movie_fps)
+    if not frames:
+        print('Failed to parse the video, please check')
+        return
 
     p = StableDiffusionProcessingMov2Mov(
         sd_model=shared.sd_model,
