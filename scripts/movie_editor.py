@@ -30,15 +30,19 @@ class MovieEditor:
     def render(self):
         id_part = self.id_part
         with InputAccordion(
-            True, label="Movie Editor", elem_id=f"{id_part}_editor_enable"
-        ) as enable_movie_editor:
-            self.gr_enable_movie_editor = enable_movie_editor
+            True, label="Movie Editor", elem_id=f"{id_part}_editor_accordion"
+        ):
             gr.HTML(
-                "<div style='color:red;font-weight: bold;border: 2px solid yellow;padding: 10px;font-size: 20px; '>"
-                "This feature is in beta version!!! </br>"
-                "It only supports Windows!!! </br>"
-                "Make sure you have installed the controlnet and IP-Adapter models."
+                "<div style='color:red;font-weight: bold;border: 2px solid yellow;padding: 10px;font-size: 20px;'>"
+                "This feature is in beta version!!! <br>"
+                "It only supports Windows!!! <br>"
+                "Make sure you have installed the ControlNet and IP-Adapter models."
                 "</div>"
+            )
+
+            self.gr_enable_movie_editor = gr.Checkbox(
+                label="Enable Movie Editor",
+                elem_id=f"{id_part}_editor_enable",
             )
 
             self.gr_frame_image = gr.Image(
