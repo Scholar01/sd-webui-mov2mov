@@ -31,12 +31,15 @@ function showModnetModels() {
 function switchModnetMode() {
     let mode = arguments[0]
 
-    if (mode === 'Clear' || mode === 'Origin' || mode === 'Green' || mode === 'Image') {
-        gradioApp().getElementById('modnet_background_movie').style.display = "none"
-        gradioApp().getElementById('modnet_background_image').style.display = "block"
+    if (mode === 'Image') {
+        gradioApp().getElementById('modnet_background_movie').style.display = 'none';
+        gradioApp().getElementById('modnet_background_image').style.display = 'block';
+    } else if (mode === 'Movie') {
+        gradioApp().getElementById('modnet_background_image').style.display = 'none';
+        gradioApp().getElementById('modnet_background_movie').style.display = 'block';
     } else {
-        gradioApp().getElementById('modnet_background_movie').style.display = "block"
-        gradioApp().getElementById('modnet_background_image').style.display = "none"
+        gradioApp().getElementById('modnet_background_movie').style.display = 'none';
+        gradioApp().getElementById('modnet_background_image').style.display = 'none';
     }
 
     return []
