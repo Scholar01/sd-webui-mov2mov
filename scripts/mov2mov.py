@@ -269,11 +269,11 @@ def mov2mov(id_task: str,
     else:
         # editor
         if platform.system() != 'Windows':
-            raise Exception('The editor is currently only supported on Windows')
+            raise Exception('The Movie Editor is currently only supported on Windows')
 
         # check df no frame
         if not check_data_frame(df):
-            raise Exception('Please add a frame')
+            raise Exception('Please add a frame in the Movie Editor or disable it')
 
         # sort df for index
         df = df.sort_values(by='frame').reset_index(drop=True)
