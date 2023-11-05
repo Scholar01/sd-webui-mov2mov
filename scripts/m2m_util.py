@@ -79,30 +79,35 @@ def get_mov_all_images(file, frames, rgb=False):
 
 def images_to_video(images, frames, out_path):
     if platform.system() == 'Windows':
-        return images_to_video_win(images, frames, out_path)
+        # Use imageio with the 'libx264' codec on Windows
+        return images_to_video_imageio(images, frames, out_path, 'libx264')
+    elif platform.system() == 'Darwin':
+        # Use cv2 with the 'avc1' codec on Mac
+        return images_to_video_cv2(images, frames, out_path, 'avc1')
     else:
-        return images_to_video_mac(images, frames, out_path)
+        # Use cv2 with the 'mp4v' codec on other operating systems as it's the most widely supported
+        return images_to_video_cv2(images, frames, out_path, 'mp4v')
 
 
-def images_to_video_win(images, frames, out_path):
+def images_to_video_imageio(images, frames, out_path, codec):
     # 判断out_path是否存在,不存在则创建
     if not os.path.exists(os.path.dirname(out_path)):
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
-    with imageio.v2.get_writer(out_path, format='ffmpeg', mode='I', fps=frames, codec='libx264') as writer:
+    with imageio.v2.get_writer(out_path, format='ffmpeg', mode='I', fps=frames, codec=codec) as writer:
         for img in images:
             writer.append_data(numpy.asarray(img))
     return out_path
 
 
-def images_to_video_mac(images, frames, out_path):
+def images_to_video_cv2(images, frames, out_path, codec):
     if len(images) <= 0:
         return None
     # 判断out_path是否存在,不存在则创建
     if not os.path.exists(os.path.dirname(out_path)):
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
-    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    fourcc = cv2.VideoWriter_fourcc(*codec)
     if len(images) > 0:
         img = images[0]
         img_width, img_height = img.size
