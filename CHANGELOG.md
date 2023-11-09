@@ -1,3 +1,6 @@
+### 2023/11/09
+1. Added Progress Bar for Resizing of Keyframes
+
 ### 2023/9/30
 1. automatic video fps parsing
 2. Video editing features.
