@@ -103,11 +103,20 @@ def process_keyframes(p, mov_file, fps, df, args):
     if not images:
         print('Failed to parse the video, please check')
         return
-
+    print(f'\nGet Frames from Video')
     # 通过宽高,缩放模式,预处理图片
     images = [PIL.Image.fromarray(image) for image in images]
-    images = [modules.images.resize_image(p.resize_mode, image, p.width, p.height) for image in images]
-    images = [np.asarray(image) for image in images]
+    imagesArr = []
+    for i, image in tqdm(enumerate(images),f"Current resize progress:",len(images)):
+       newImg = modules.images.resize_image(p.resize_mode, image, p.width, p.height)
+       imagesArr.append(newImg)
+       if state.skipped:
+            state.skipped = False
+
+       if state.interrupted:
+            break
+    #images = [modules.images.resize_image(p.resize_mode, image, p.width, p.height) for image in images]
+    images = [np.asarray(image) for image in imagesArr]
 
     default_prompt = p.prompt
     max_frames = len(df)
@@ -115,7 +124,7 @@ def process_keyframes(p, mov_file, fps, df, args):
     p.do_not_save_grid = True
     state.job_count = max_frames  # * p.n_iter
     generate_images = []
-
+    print(f'\nStart loop Generation')
     for i, row in df.iterrows():
         p.prompt = default_prompt + row['prompt']
         frame = images[row['frame'] - 1]
