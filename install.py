@@ -6,6 +6,10 @@ if not launch.is_installed("cv2"):
     print('Installing requirements for Mov2mov')
     launch.run_pip("install opencv-python", "requirements for opencv")
 
+if not launch.is_installed("toolz"):
+    print('Installing requirements for Mov2mov')
+    launch.run_pip("install toolz", "requirements for toolz")
+
 if platform.system() == 'Windows':
     if not launch.is_installed('imageio'):
         print('Installing requirements for Mov2mov')
