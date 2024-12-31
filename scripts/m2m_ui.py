@@ -22,7 +22,7 @@ from modules.images import image_data
 from modules.shared import opts
 from modules.ui import (
     ordered_ui_categories,
-    create_sampler_and_steps_selection,
+    #create_sampler_and_steps_selection,
     switch_values_symbol,
     create_override_settings_dropdown,
     detect_image_size_symbol,
@@ -127,6 +127,12 @@ class Toprow:
                         elem_id=f"{id_part}_interrupt",
                         elem_classes="generate-box-interrupt",
                     )
+                    self.interrupting = gr.Button(
+                        "Interrupting...",
+                        elem_id=f"{id_part}_interrupting",
+                        elem_classes="generate-box-interrupting", 
+                        tooltip="Interrupting generation..."
+                    )
                     self.skip = gr.Button(
                         "Skip",
                         elem_id=f"{id_part}_skip",
@@ -143,6 +149,12 @@ class Toprow:
                     )
 
                     self.interrupt.click(
+                        fn=lambda: shared.state.interrupt(),
+                        inputs=[],
+                        outputs=[],
+                    )
+
+                    self.interrupting.click(
                         fn=lambda: shared.state.interrupt(),
                         inputs=[],
                         outputs=[],
@@ -340,6 +352,9 @@ def create_refiner():
             )
     return enable_refiner, refiner_checkpoint, refiner_switch_at
 
+
+def create_sampler_and_steps_selection(choices, tabname):
+    return scripts.scripts_txt2img.script('Sampler').steps, scripts.scripts_txt2img.script('Sampler').sampler_name
 
 def on_ui_tabs():
     scripts_mov2mov.initialize_scripts(is_img2img=True)
