@@ -1,16 +1,21 @@
 function submit_mov2mov() {
-    rememberGallerySelection('mov2mov_gallery')
+    
     showSubmitButtons('mov2mov', false)
     showResultVideo('mov2mov', false)
 
-    var id = randomId()
+    var id = randomId();
+    localSet("mov2mov_task_id", id);
+
     requestProgress(id, gradioApp().getElementById('mov2mov_gallery_container'), gradioApp().getElementById('mov2mov_gallery'), function () {
         showSubmitButtons('mov2mov', true)
         showResultVideo('mov2mov', true)
+        localRemove("mov2mov_task_id");
+        
     })
 
     var res = create_submit_args(arguments)
     res[0] = id
+    res[1] = 2
     return res
 }
 
@@ -45,4 +50,15 @@ function switchModnetMode() {
 
 function copy_from(type) {
     return []
+}
+
+
+function currentMov2movSourceResolution(w, h, scaleBy) {
+    var video = gradioApp().querySelector('#mov2mov_mov video');
+    
+    // 检查视频元素是否存在并且已加载
+    if (video && video.videoWidth && video.videoHeight) {
+        return [video.videoWidth, video.videoHeight, scaleBy];
+    }
+    return [0, 0, scaleBy];
 }

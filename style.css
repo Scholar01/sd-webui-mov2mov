@@ -10,6 +10,14 @@
 /*    display: none;*/
 /*}*/
 
+
+#mov2mov_unused_scale_by_slider{
+    visibility: hidden;
+    width: 0.5em;
+    max-width: 0.5em;
+    min-width: 0.5em;
+}
+
 #modnet_background_movie {
     display: none;
 }
@@ -20,7 +28,7 @@
 }
 
 #mov2mov_generate {
-    min-height: 7.5em;
+    min-height: 4.5em;
 }
 
 @media screen and (min-width: 2500px) {

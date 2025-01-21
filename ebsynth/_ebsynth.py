@@ -1,6 +1,5 @@
 # fork for Ezsynth(https://github.com/Trentonom0r3/Ezsynth)
 
-import os
 import sys
 from ctypes import *
 from pathlib import Path
