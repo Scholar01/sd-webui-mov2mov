@@ -15,6 +15,7 @@
     min-width: 0.5em;
 }
 
+#modnet_background_image,
 #modnet_background_movie {
     display: none;
 }
